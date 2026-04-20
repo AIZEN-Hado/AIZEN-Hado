@@ -1,7 +1,7 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yash%20Chauhan&fontSize=48&fontColor=fff&animation=twinkling&fontAlignY=35&desc=Blockchain%20Dev%20%7C%20Android%20App%20Dev%20%7C%20MERN%2FPERN%20Stack%20Dev&descSize=18&descAlignY=55&textBg=false"/>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&duration=4000&pause=1000&color=00FF41&center=true&vCenter=true&width=650&lines=Fix%20the%20cause%2C%20not%20the%20symptom" alt="Typing introduction" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&duration=4000&pause=1000&color=00FF41&center=true&vCenter=true&width=650&lines=Any%20fool%20can%20write%20code%20that%20a%20computer%20can%20understand.%20Good%20programmers%20write%20code%20that%20humans%20can%20understand" alt="Typing introduction" />
 </p>
 
 <p align="center">
