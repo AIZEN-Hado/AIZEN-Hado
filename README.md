@@ -1,4 +1,4 @@
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=Blockchain%20Dev%20%7C%20Android%20App%20Dev%20%7C%20MERN%2FPERN%20Stack%20Dev&descSize=18&descAlignY=55&textBg=false"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=Blockchain%20Dev%20%7C%20Android%20App%20Dev%20%7C%20Full%20Stack%20Dev&descSize=18&descAlignY=55&textBg=false"/>
 
 
 
