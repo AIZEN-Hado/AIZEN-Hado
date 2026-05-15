@@ -1,4 +1,4 @@
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=%20%7C%20Android%20GenAI%20Enthusiast%20%7C%20Java%20Developer%20%7C%20Full%20Stack%20DeveloperdescSize=18&descAlignY=55&textBg=false"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=%20%7C%20Android%20GenAI%20Enthusiast%20%7C%20Java%20Developer%20%7C%20Full%20Stack%20Developer&descSize=18&descAlignY=55&textBg=false"/>
 
 
 
