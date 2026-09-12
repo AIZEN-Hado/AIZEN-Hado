@@ -1,4 +1,4 @@
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=%20%7C%20Android%20GenAI%20Enthusiast%20%7C%20Java%20Developer%20%7C%20Full%20Stack%20Developer&descSize=18&descAlignY=55&textBg=false"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=6,11,20,29&text=Yashsingh%20Chauhan&fontSize=48&fontColor=fff&animation=sparkling&fontAlignY=35&desc=%20%7C%20AI%20Engineer%20%7C%20LLM%20Systems%20%7C%20Full%20Stack%20Developer&descSize=18&descAlignY=55&textBg=false"/>
 
 
 
@@ -22,17 +22,17 @@
 <img src="https://user-images.githubusercontent.com/74038190/216644497-1951db19-8f3d-4e44-ac08-8e9d7e0d94a7.gif" alt="Banner" width="100%" />
 
 ## 📌 About Me
-- 🚀 Full Stack Developer focused on building AI-driven and real-time applications.
-- Currently transitioning into Java Full Stack Development with a focus on microservices architecture, scalable backend systems, and distributed application design using Spring Boot and modern backend technologies.
-- I specialize in designing end-to-end solutions, including AI-powered platforms, real-time systems, and performance-optimized applications.
-- 💡 I enjoy solving complex problems involving asynchronous workflows, real-time systems, and LLM integrations.
+- 🚀 AI Engineer and Full Stack Developer building intelligent systems that go beyond the notebook and into production.
+- My core work is in LLM applications, Retrieval-Augmented Generation, GraphRAG, and multi-agent orchestration, backed by scalable Python services.
+- I also build end-to-end full stack products when a project calls for it, from REST APIs and databases to the interfaces on top.
+- 💡 I enjoy solving problems that sit at the intersection of AI systems, distributed backends, and real-time workflows.
 
 
 ## 🧠 My Focus Areas
-- Java Full Stack Development (Spring Boot, REST APIs).
-- Microservices architecture & 0system design.
-- AI & LLM-based applications.
-- Scalable backend engineering.
+- AI & LLM Systems (RAG, GraphRAG, Multi-Agent Workflows, MCP).
+- Python & Backend Engineering (FastAPI, REST APIs, PostgreSQL).
+- Full Stack Development (Java, Spring Boot, React, Node.js).
+- Scalable system design & cloud infrastructure.
 
 
 ## 📊 GitHub Stats & Trophies
@@ -54,6 +54,14 @@
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="JavaScript" width="40" />&nbsp;
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="TypeScript" width="40" />&nbsp;
   <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/java/java-original.svg" alt="Java" width="40" />
+
+</p>
+
+<h3 align="center">AI / ML</h3>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/pytorch/pytorch-original.svg" alt="PyTorch" width="40" />&nbsp;
+  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/pandas/pandas-original.svg" alt="Pandas" width="40" />&nbsp;
+  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/numpy/numpy-original.svg" alt="NumPy" width="40" />
 
 </p>
 
@@ -97,36 +105,24 @@
   <img src="https://www.vectorlogo.zone/logos/visualstudio_code/visualstudio_code-icon.svg" alt="VS Code" width="40" />&nbsp;
   <img src="https://www.vectorlogo.zone/logos/getpostman/getpostman-icon.svg" alt="Postman" width="40" />&nbsp;
   <img src="https://www.vectorlogo.zone/logos/vitejsdev/vitejsdev-icon.svg" alt="Vite" width="40" />
-
 </p>
 
 <p align="center">
-  <a href="https://github.com/AIZEN-Hado">
-    <img height="180em" src="https://github-readme-stats-eight-theta.vercel.app/api/top-langs/?username=AIZEN-Hado&langs_count=8&layout=compact&theme=synthwave&border_radius=10" alt="Top Languages" />
-  </a>
+  <img src="https://github-readme-stats-eight-theta.vercel.app/api/top-langs/?username=AIZEN-Hado&langs_count=8&layout=compact&theme=synthwave&border_radius=10" alt="Top Languages" />
 </p>
 
-![Top language](https://stats.pphat.top/languages?username=AIZEN-Hado)
-<br/>
+<p align="center">
+  <img src="https://stats.pphat.top/languages?username=AIZEN-Hado" alt="Top language" />
+</p>
 
 ## 🔗 Connect with Me
-<p align="center">
-  <a href="https://www.linkedin.com/in/yashsinghchauhan29">
-    <img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/LinkedIN.svg" alt="LinkedIn" width="40" />
-  </a>&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://wa.me/918962125787">
-    <img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/WhatsApp.svg" alt="WhatsApp" width="40" />
-  </a>&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="mailto:yashchauhan2905@gmail.com">
-    <img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/Gmail.svg" alt="Gmail" width="40" />
-  </a>
-</p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/czl9707/gh-space-shooter/main/example.gif" alt="Space shooter contribution graph" />
+  <a href="https://www.linkedin.com/in/yashsinghchauhan29"><img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/LinkedIN.svg" width="40" alt="LinkedIn" /></a>&nbsp;
+  <a href="https://wa.me/918962125787"><img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/WhatsApp.svg" width="40" alt="WhatsApp" /></a>&nbsp;
+  <a href="mailto:yashchauhan2905@gmail.com"><img src="https://raw.githubusercontent.com/gauravghongde/social-icons/master/SVG/Color/Gmail.svg" width="40" alt="Gmail" /></a>
 </p>
 
-<div align="center">
-  <img src="https://user-images.githubusercontent.com/74038190/212284100-561aa473-3905-4a80-b561-0d28506553ee.gif" alt="Bottom Line" width="100%" />
-</div>
+<img src="https://raw.githubusercontent.com/czl9707/gh-space-shooter/main/example.gif" alt="Space shooter contribution graph" width="100%" />
 
+<img src="https://user-images.githubusercontent.com/74038190/212284100-561aa473-3905-4a80-b561-0d28506553ee.gif" alt="Bottom Line" width="100%" />
