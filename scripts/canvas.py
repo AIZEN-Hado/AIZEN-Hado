@@ -34,7 +34,7 @@ def phase_delays(theta, half):
 # =============================================================================== layout
 def layout(cfg):
     sections = [("hero", 480), ("about", 560), ("focus", 520), ("journey", 460),
-                ("projects", 150 + 124 * len(cfg["projects"])), ("telemetry", 610), ("contact", 440)]
+                ("interlude", 500), ("telemetry", 610), ("contact", 440)]
     out, y = {}, 0
     for name, h in sections:
         out[name] = (y, h)
@@ -295,33 +295,106 @@ def journey(cfg, y0):
     return "".join(s)
 
 
-CSS_BEAM = ".beam{animation:beam 9s linear infinite backwards}@keyframes beam{from{transform:translateX(-180px)}to{transform:translateX(900px)}}"
-PROJECT_SHAPES = [("tetrahedron", sf.EMBER), ("octahedron", sf.ICE), ("cube", sf.ROSE)]
+# =============================================================================== interlude
+CSS_CODER = (
+    ".cs{animation:cs 15.4s steps(11) infinite}@keyframes cs{to{transform:translateY(-176px)}}"
+    ".ty{animation:ty 1.4s steps(16) infinite}@keyframes ty{from{transform:scaleX(0)}to{transform:scaleX(1)}}"
+    ".cu{animation:cu 1.4s steps(16) infinite}@keyframes cu{from{transform:translateX(0)}to{transform:translateX(var(--w))}}"
+    ".bl{animation:bl .7s steps(1) infinite}@keyframes bl{50%{opacity:0}}"
+    ".br{animation:br 4.6s ease-in-out infinite alternate}@keyframes br{to{transform:translateY(-2px)}}"
+    ".hd{transform-origin:530px 372px;animation:hd 7s ease-in-out infinite alternate}@keyframes hd{0%{transform:rotate(-1.6deg)}100%{transform:rotate(1.4deg)}}"
+    ".sm{animation:sm 3.2s linear infinite}@keyframes sm{0%{stroke-dashoffset:0;opacity:0}20%{opacity:.5}100%{stroke-dashoffset:-48;opacity:0}}"
+    ".up{animation:up ease-out infinite}@keyframes up{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-120px);opacity:0}}"
+    ".gl{animation:gl 6s ease-in-out infinite}@keyframes gl{50%{opacity:.75}}"
+)
+TOKEN_COLORS = [("#ffffff", .82), ("#ffffff", .42), ("#ffffff", .26), (sf.ICE, .85), (sf.EMBER, .85), (sf.MOSS, .8), (sf.ROSE, .8)]
 
 
-def hairline(y, uid, delay):
-    return (f'<defs><clipPath id="c-hc-{uid}"><rect x="60" y="{y - 2}" width="880" height="4"/></clipPath></defs>'
-            f'<rect x="60" y="{y - .5}" width="880" height="1" fill="url(#c-hl)"/>'
-            f'<g clip-path="url(#c-hc-{uid})"><rect class="beam" style="animation-delay:{delay}s" x="60" y="{y - .7}" '
-            f'width="170" height="1.4" fill="url(#c-bm)"/></g>')
+def code_line(rng, x, y, max_w=280):
+    """One line of 'code': indented tokens as rounded bars, coloured like syntax highlighting."""
+    indent = rng.choice([0, 0, 16, 16, 32, 48])
+    out, cx = [], x + indent
+    for _ in range(rng.randint(2, 6)):
+        w = rng.choice([10, 14, 18, 24, 30, 38, 52])
+        if cx + w > x + max_w:
+            break
+        col, op = rng.choice(TOKEN_COLORS)
+        out.append(f'<rect x="{cx}" y="{y}" width="{w}" height="5" rx="2.5" fill="{col}" fill-opacity="{op}"/>')
+        cx += w + 6
+    return "".join(out), cx - x
 
 
-def projects(cfg, y0):
-    s = [f'<g transform="translate(0 {y0})">', heading(4, "PROJECTS", 118),
-         '<defs><linearGradient id="c-hl" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/>'
-         '<stop offset="1" stop-color="#fff" stop-opacity=".02"/></linearGradient>'
-         '<linearGradient id="c-bm" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-         '<stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>']
-    for i, p in enumerate(cfg["projects"]):
-        top = 150 + i * 124
-        shape, color = PROJECT_SHAPES[i % len(PROJECT_SHAPES)]
-        s.append(solid(shape, 82, top + 50, 17, color, period=11 + i * 3, samples=30, width=1.3, uid=f"proj{i}"))
-        s.append(sf.text(p["name"], 126, top + 58, 34, "inter-600", attrs=f'fill="{sf.INK}"')[0])
-        s.append(sf.text(p["description"], 126, top + 90, 17, "inter-400", attrs=f'fill="{sf.BODY}"')[0])
-        s.append(sf.label(p["tags"].upper(), 940, top + 53, sf.DIM, 1, size=11, spacing=1.5, anchor="end"))
-        s.append(hairline(top + 123, f"p{i}", round(i * 1.6, 1)))
+def interlude(y0):
+    """A coder seen over the shoulder, rim-lit by a monitor where code keeps typing itself. No words."""
+    rng = random.Random("coder")
+    sx, sy, sw, sh = 362, 64, 336, 226               # screen
+    s = [f'<g transform="translate(0 {y0})">',
+         '<defs>'
+         '<radialGradient id="c-spill" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#cfe0ff" stop-opacity=".11"/>'
+         '<stop offset="1" stop-color="#cfe0ff" stop-opacity="0"/></radialGradient>'
+         '<linearGradient id="c-scr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1018"/>'
+         '<stop offset="1" stop-color="#06080c"/></linearGradient>'
+         '<linearGradient id="c-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8f0ff" stop-opacity=".75"/>'
+         '<stop offset=".45" stop-color="#e8f0ff" stop-opacity=".22"/><stop offset="1" stop-color="#e8f0ff" stop-opacity="0"/></linearGradient>'
+         '<linearGradient id="c-desk" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+         '<stop offset=".5" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+         f'<clipPath id="c-screen"><rect x="{sx + 10}" y="{sy + 10}" width="{sw - 20}" height="{sh - 20}" rx="3"/></clipPath>'
+         '</defs>']
+    # light the screen throws into the room
+    s.append(f'<ellipse class="gl" cx="530" cy="190" rx="360" ry="230" fill="url(#c-spill)"/>')
+    s.append(f'<ellipse cx="530" cy="344" rx="300" ry="16" fill="url(#c-spill)"/>')
+    # desk
+    s.append('<rect x="150" y="336" width="760" height="1.2" fill="url(#c-desk)"/>')
+    # monitor
+    s.append(f'<rect x="{sx}" y="{sy}" width="{sw}" height="{sh}" rx="9" fill="url(#c-scr)" stroke="#fff" stroke-opacity=".22"/>')
+    s.append(f'<path d="M522,{sy + sh}V326M500,334H560" stroke="#fff" stroke-opacity=".22" stroke-width="2" fill="none"/>')
+    # code: a block that steps up a line at a time, plus the line being typed
+    lines = []
+    for i in range(22):
+        svg, _ = code_line(rng, sx + 22, sy + 24 + i * 16)
+        lines.append(svg)
+    s.append(f'<g clip-path="url(#c-screen)"><g class="cs">{"".join(lines)}</g>')
+    ty_y = sy + 24 + 11 * 16
+    typed_svg, typed_w = code_line(random.Random("typed"), sx + 22, ty_y)
+    s.append(f'<rect x="{sx + 10}" y="{ty_y - 6}" width="{sw - 20}" height="17" fill="#0a0e15"/>')
+    s.append(f'<g class="ty" style="transform-origin:{sx + 22}px 0">{typed_svg}</g>')
+    s.append(f'<rect class="cu" style="--w:{f(typed_w)}px" x="{sx + 24}" y="{ty_y - 3}" width="2" height="11" fill="{AMBER}"/>')
+    s.append("</g>")
+    # sparks of light drifting up off the screen
+    for i in range(16):
+        x = rng.uniform(sx + 20, sx + sw - 20)
+        dur = rng.uniform(4, 8)
+        s.append(f'<circle class="up" style="animation-duration:{f(dur)}s;animation-delay:-{f(rng.uniform(0, dur))}s" '
+                 f'cx="{f(x)}" cy="{sy - 4}" r="{rng.choice([.8, 1, 1.3])}" fill="#fff"/>')
+    # mug with steam, and a small plant
+    s.append('<path d="M752,306h26v24a6,6 0 0 1 -6,6h-14a6,6 0 0 1 -6,-6Z" fill="#07090d" stroke="#fff" stroke-opacity=".35"/>'
+             '<path d="M778,312h4a6,6 0 0 1 0,12h-4" fill="none" stroke="#fff" stroke-opacity=".35"/>')
+    for k, x in enumerate((760, 770)):
+        s.append(f'<path class="sm" style="animation-delay:-{k * 1.6}s" d="M{x},300c-6,-8 6,-14 0,-22c-6,-8 6,-14 0,-22" '
+                 f'fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="14 34"/>')
+    s.append('<path d="M262,336h28l-4,-22h-20Z" fill="#07090d" stroke="#fff" stroke-opacity=".3"/>'
+             '<path d="M276,314c0,-18 -14,-26 -22,-32M276,314c0,-22 8,-34 20,-40M276,314c-2,-12 -10,-16 -16,-16" '
+             'fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="1.3" stroke-linecap="round"/>')
+    # the coder, from behind: silhouette that hides the screen, outlined by its light
+    body = ("M372,500C378,436 404,404 452,392C478,386 494,378 500,366H560C566,378 582,386 608,392"
+            "C656,404 682,436 688,500Z")
+    hood = "M486,372C484,350 500,344 530,344C560,344 576,350 574,372C560,380 500,380 486,372Z"
+    s.append(f'<g class="br"><path d="{body}" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.6"/>'
+             f'<path d="{hood}" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.4"/>')
+    s.append('<g class="hd">'
+             f'<path d="M517,372V352H543V372Z" fill="{sf.PAGE}"/>'
+             f'<ellipse cx="530" cy="314" rx="39" ry="45" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.6"/>'
+             # a few strands of hair catching the light
+             '<path d="M500,284c10,-12 34,-16 52,-6M512,276c12,-6 28,-6 40,2" fill="none" stroke="#e8f0ff" stroke-opacity=".28" stroke-width="1.1" stroke-linecap="round"/>'
+             # headphones
+             '<path d="M490,318C488,280 506,262 530,262C554,262 572,280 570,318" fill="none" stroke="#e8f0ff" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/>'
+             f'<rect x="481" y="300" width="15" height="34" rx="6" fill="#0c0f14" stroke="#e8f0ff" stroke-opacity=".4"/>'
+             f'<rect x="564" y="300" width="15" height="34" rx="6" fill="#0c0f14" stroke="#e8f0ff" stroke-opacity=".4"/>'
+             f'<circle class="bl" cx="571.5" cy="308" r="1.6" fill="{AMBER}"/>'
+             '</g></g>')
     s.append("</g>")
     return "".join(s)
+
 
 
 CSS_TERRAIN = (".wk{animation:wk 9s ease-in-out infinite}@keyframes wk{0%,14%,100%{opacity:.55}7%{opacity:1}}"
@@ -330,7 +403,7 @@ CSS_TERRAIN = (".wk{animation:wk 9s ease-in-out infinite}@keyframes wk{0%,14%,10
 
 def telemetry(data, y0):
     live = data["total"] is not None
-    s = [f'<g transform="translate(0 {y0})">', heading(5, "TELEMETRY", 132)]
+    s = [f'<g transform="translate(0 {y0})">', heading(4, "TELEMETRY", 132)]
     active = sum(1 for _, c, _ in data["days"] if c)
     stats = [(data["total"], "CONTRIBUTIONS / 12 MONTHS"), (active if live else None, "ACTIVE DAYS"),
              (data["repos"], "PUBLIC REPOSITORIES")]
@@ -413,7 +486,7 @@ def telemetry(data, y0):
 
 
 def contact(cfg, y0, h):
-    s = [f'<g transform="translate(0 {y0})">', heading(6, "CONTACT", 132),
+    s = [f'<g transform="translate(0 {y0})">', heading(5, "CONTACT", 132),
          sf.text(cfg.get("contact_line", "Reach me through any of the links below."), 60, 196, 23, "inter-400",
                  attrs=f'fill="{sf.BODY}"')[0]]
     s.append(wave_field(236, h, sf.EMBER, sf.ROSE))
@@ -428,11 +501,10 @@ def contact(cfg, y0, h):
 def build(cfg, hero_svg, data):
     lay, total = layout(cfg)
     hero_inner = hero_svg[hero_svg.index(">") + 1: hero_svg.rindex("</svg>")]
-    css = CSS_BG + CSS_TURN + CSS_JOURNEY + CSS_BEAM + CSS_TERRAIN
+    css = CSS_BG + CSS_TURN + CSS_JOURNEY + CSS_CODER + CSS_TERRAIN
     label = (f'{cfg["name"]}: AI engineer, LLM systems, full stack. '
              + " ".join("".join(t for t, _ in line) for line in cfg["about"]) + " "
-             + ". ".join(f'{p["title"]}: {" ".join(p["lines"])}' for p in cfg["focus"]) + ". Projects: "
-             + "; ".join(f'{p["name"]}, {p["description"]}' for p in cfg["projects"]) + ".")
+             + ". ".join(f'{p["title"]}: {" ".join(p["lines"])}' for p in cfg["focus"]) + ".")
     s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {total}" width="{W}" height="{total}" role="img" '
          f'aria-label="{sf.esc(label)}"><style>{css}@media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}</style>',
          f'<defs><clipPath id="c-all"><path d="M0,6a6,6 0 0 1 6,-6H{W - 6}a6,6 0 0 1 6,6V{total}H0Z"/></clipPath></defs>',
@@ -440,7 +512,7 @@ def build(cfg, hero_svg, data):
          background(lay["hero"][1], total),
          f"<g>{hero_inner}</g>",
          about(cfg, lay["about"][0]), focus(cfg, lay["focus"][0]), journey(cfg, lay["journey"][0]),
-         projects(cfg, lay["projects"][0]), telemetry(data, lay["telemetry"][0]),
+         interlude(lay["interlude"][0]), telemetry(data, lay["telemetry"][0]),
          contact(cfg, lay["contact"][0], lay["contact"][1]),
          "</g></svg>"]
     return "".join(s)

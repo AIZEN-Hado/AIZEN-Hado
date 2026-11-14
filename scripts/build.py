@@ -172,8 +172,6 @@ def readme():
     img = '<img align="top" width="{w}" src="assets/{src}" alt="{alt}" />'
     rows = [f'<a href="{CFG["links"][0]["url"]}">' + img.format(w="100%", src="canvas.svg", alt=sf.esc(
         f'{CFG["name"]}: AI engineer, LLM systems, full stack')) + "</a>"]
-    for i, p in enumerate(CFG["projects"]):
-        rows.append(f'<a href="{p["url"]}">' + img.format(w="33.333%", src=f"chip-project-{i + 1}.svg", alt=p["name"]) + "</a>")
     for i, l in enumerate(CFG["links"]):
         rows.append(f'<a href="{l["url"]}">' + img.format(w="25%", src=f"chip-link-{i + 1}.svg", alt=l["label"]) + "</a>")
     rows.append(img.format(w="100%", src="footer.svg", alt=""))
@@ -195,8 +193,6 @@ def main():
     for old in ASSETS.glob("*.svg"):
         old.unlink()
     out = {"canvas.svg": canvas.build(CFG, hero(), load_telemetry()), "footer.svg": canvas.footer()}
-    for i, p in enumerate(CFG["projects"]):
-        out[f"chip-project-{i + 1}.svg"] = canvas.chip(p["name"], p["chip"], 400, first=(i == 0))
     for i, l in enumerate(CFG["links"]):
         out[f"chip-link-{i + 1}.svg"] = canvas.chip(l["label"], l["detail"].upper(), 300, first=(i == 0))
     for name, svg in out.items():
