@@ -4,56 +4,24 @@
   "tagline": "AI ENGINEER  /  LLM SYSTEMS  /  FULL STACK",
   "projects": [
     {
-      "repo": "Fisherman",
-      "description": "",
-      "tags": ""
+      "name": "PolicyPilot AI",
+      "url": "https://portfoliio-jet.vercel.app/docs/policypilot.html",
+      "description": "Insurance claims decisions with RAG, knowledge graphs and multi-agent workflows",
+      "tags": "FastAPI · LangGraph · FAISS"
     },
     {
-      "repo": "LLMtuning",
-      "description": "",
-      "tags": ""
+      "name": "ClasslyAI",
+      "url": "https://github.com/AIZEN-Hado/CLASSLYAI",
+      "description": "AI-powered learning platform and course marketplace, live in production",
+      "tags": "Firebase · Stripe · OCR"
     },
     {
-      "repo": "pseudoCV",
-      "description": "",
-      "tags": ""
-    },
-    {
-      "repo": "CLASSLYAI",
-      "description": "",
-      "tags": ""
+      "name": "Offline UPI Mesh",
+      "url": "https://github.com/AIZEN-Hado/Offline_upi",
+      "description": "Offline payments over a multi-hop mesh, encrypted and executed exactly once",
+      "tags": "Spring Boot · RSA + AES-GCM"
     }
   ],
-  "stack": {
-    "AI / LLM": [
-      "RAG",
-      "GraphRAG",
-      "Multi-Agent",
-      "MCP",
-      "PyTorch"
-    ],
-    "BACKEND": [
-      "Python",
-      "FastAPI",
-      "Java",
-      "Spring Boot",
-      "Node.js"
-    ],
-    "FRONTEND": [
-      "React",
-      "TypeScript",
-      "Tailwind CSS",
-      "Vite"
-    ],
-    "DATA / INFRA": [
-      "PostgreSQL",
-      "MongoDB",
-      "Redis",
-      "Docker",
-      "AWS",
-      "Google Cloud"
-    ]
-  },
   "links": [
     {
       "label": "Portfolio",
@@ -79,29 +47,25 @@
   "about": [
     [
       [
-        "AI engineer and full stack developer building ",
+        "I'm Yash. I build ",
         false
       ],
       [
         "LLM systems",
         true
+      ],
+      [
+        " that go beyond",
+        false
       ]
     ],
     [
       [
-        "that go beyond the notebook and into production: ",
+        "the notebook and into production: ",
         false
       ],
       [
         "RAG",
-        true
-      ],
-      [
-        ", ",
-        false
-      ],
-      [
-        "GraphRAG",
         true
       ],
       [
@@ -111,13 +75,92 @@
     ],
     [
       [
-        "multi-agent orchestration",
+        "knowledge graphs",
         true
       ],
       [
-        ", and the Python services behind them.",
+        " and ",
+        false
+      ],
+      [
+        "multi-agent workflows",
+        true
+      ],
+      [
+        ",",
+        false
+      ]
+    ],
+    [
+      [
+        "backed by scalable Python services.",
         false
       ]
     ]
+  ],
+  "facts": [
+    [
+      "NOW",
+      "AI engineer and full stack developer"
+    ],
+    [
+      "STUDIED",
+      "B.Tech Computer Science, VIT (2022 - 2026)"
+    ],
+    [
+      "BEFORE",
+      "AWS Cloud Intern at iStudio (2025)"
+    ]
+  ],
+  "focus": [
+    {
+      "shape": "icosahedron",
+      "title": "LLM systems",
+      "lines": [
+        "RAG, GraphRAG and multi-agent",
+        "workflows, built for production"
+      ],
+      "tags": "LANGGRAPH · LLAMAINDEX · MCP"
+    },
+    {
+      "shape": "cube",
+      "title": "Backend engineering",
+      "lines": [
+        "REST APIs, data layers and",
+        "distributed services"
+      ],
+      "tags": "FASTAPI · SPRING BOOT · POSTGRESQL"
+    },
+    {
+      "shape": "octahedron",
+      "title": "Full stack and cloud",
+      "lines": [
+        "End-to-end products, from",
+        "database to interface to deploy"
+      ],
+      "tags": "REACT · NODE.JS · AWS · DOCKER"
+    }
+  ],
+  "journey": [
+    {
+      "when": "2022",
+      "title": "B.Tech Computer Science",
+      "sub": "Vellore Institute of Technology"
+    },
+    {
+      "when": "2025",
+      "title": "AWS Cloud Intern",
+      "sub": "iStudio · EC2, VPC, IAM, S3"
+    },
+    {
+      "when": "Now",
+      "title": "Building LLM systems",
+      "sub": "RAG · knowledge graphs · agents"
+    }
+  ],
+  "certifications": [
+    "Cloud Computing (NPTEL)",
+    "Generative AI with watsonx (IBM)",
+    "Full Stack (Ethnus)"
   ]
 }

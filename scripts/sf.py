@@ -158,17 +158,19 @@ def label(s, x, y, color="#fff", opacity=.6, size=12, spacing=3, anchor="start")
 
 
 # ----------------------------------------------------------------------------- the page canvas
-SLICES = [("hero", 480), ("intro", 300), ("p0", 110), ("p1", 110), ("p2", 110), ("p3", 110),
-          ("telemetry", 490), ("systems", 440), ("contact", 150), ("l0", 84), ("l1", 84), ("l2", 84),
-          ("l3", 84), ("footer", 140)]
+SLICES = [("hero", 480), ("about", 560), ("focus", 520), ("journey", 390), ("projects", 150),
+          ("p0", 124), ("p1", 124), ("p2", 124), ("telemetry", 490), ("contact", 150),
+          ("l0", 84), ("l1", 84), ("l2", 84), ("l3", 84), ("footer", 140)]
 OFFSET, _y = {}, 0
 for _name, _h in SLICES:
     OFFSET[_name] = (_y, _h)
     _y += _h
 TOTAL = _y
 
-VIOLET, BLUE, CYAN, MINT, PINK, MAGENTA = "#8b7bff", "#5ea2ff", "#22d3ee", "#34d399", "#f472b6", "#e879f9"
-ORANGE = "#ff8a3d"
+PAGE = "#030405"                                   # matches the bottom of the hero
+INK, BODY, DIM = "#f4f6fa", "#9aa0aa", "#5d636d"   # text: strong, body, labels
+# colour is reserved for the 3D objects
+ICE, EMBER, MOSS, ROSE = "#8fb3ff", "#ff9e64", "#9ece6a", "#f7768e"
 
 
 def _at(name, frac=0.0):
@@ -176,104 +178,63 @@ def _at(name, frac=0.0):
     return y0 + h * frac
 
 
-# background colour down the page
-STOPS = [(0, "#030405"), (_at("intro"), "#030405"), (_at("p0"), "#0b0a24"), (_at("telemetry"), "#081428"),
-         (_at("systems"), "#05191d"), (_at("contact"), "#1a0b20"), (_at("l2"), "#1b100a"), (TOTAL, "#040302")]
-# soft static glows: (cx, cy, rx, ry, colour, opacity) in page coordinates
-GLOWS = [(140, _at("p0") - 20, 440, 250, VIOLET, .26), (900, _at("p2"), 400, 300, BLUE, .20),
-         (180, _at("telemetry", .45), 470, 300, CYAN, .15), (880, _at("telemetry", .95), 420, 260, MINT, .11),
-         (160, _at("systems", .6), 430, 290, MAGENTA, .15), (870, _at("contact", .4), 420, 260, PINK, .14),
-         (260, _at("l2"), 440, 230, AMBER, .13), (820, _at("footer", .1), 360, 170, ORANGE, .08)]
-# what floats in the background changes as you move down the page
-ZONES = [(_at("intro"), "motes", [VIOLET, BLUE, "#c4b5fd", "#ffffff"]),
-         (_at("telemetry"), "streaks", [CYAN, "#67e8f9", MINT]),
-         (_at("systems"), "sparks", [PINK, MAGENTA, "#fb7185"]),
-         (_at("contact"), "embers", [AMBER, ORANGE, "#ffd08a"])]
-
-
 def _rgb(h):
     return [int(h[i:i + 2], 16) for i in (1, 3, 5)]
 
 
 def bg_color(y):
-    for (y0, c0), (y1, c1) in zip(STOPS, STOPS[1:]):
-        if y0 <= y <= y1:
-            t = (y - y0) / (y1 - y0) if y1 > y0 else 0
-            t = t * t * (3 - 2 * t)
-            return "#" + "".join(f"{round(a + (b - a) * t):02x}" for a, b in zip(_rgb(c0), _rgb(c1)))
-    return STOPS[-1][1]
+    return PAGE
 
 
 def backdrop(name):
-    """Background for one slice: its stretch of the page gradient plus any glows that reach into it."""
-    y0, h = OFFSET[name]
-    n = max(2, round(h / 30))
-    stops = "".join(f'<stop offset="{i / n:.3f}" stop-color="{bg_color(y0 + h * i / n)}"/>' for i in range(n + 1))
-    s = [f'<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">{stops}</linearGradient>']
-    body = []
-    for i, (cx, cy, rx, ry, col, op) in enumerate(GLOWS):
-        if cy + ry < y0 or cy - ry > y0 + h:
-            continue
-        s.append(f'<radialGradient id="gl{i}"><stop offset="0" stop-color="{col}" stop-opacity="{op}"/>'
-                 f'<stop offset=".55" stop-color="{col}" stop-opacity="{op * .35:.3f}"/>'
-                 f'<stop offset="1" stop-color="{col}" stop-opacity="0"/></radialGradient>')
-        body.append(f'<ellipse cx="{cx}" cy="{f(cy - y0)}" rx="{rx}" ry="{ry}" fill="url(#gl{i})"/>')
+    """Background for one slice: the same black as the hero."""
+    _, h = OFFSET[name]
     if name == "footer":
-        s.append(f'<clipPath id="page"><path d="M0,0H{W}V{h - 6}a6,6 0 0 1 -6,6H6a6,6 0 0 1 -6,-6Z"/></clipPath>')
+        clip = f'<path d="M0,0H{W}V{h - 6}a6,6 0 0 1 -6,6H6a6,6 0 0 1 -6,-6Z"/>'
     else:
-        s.append(f'<clipPath id="page"><rect width="{W}" height="{h}"/></clipPath>')
-    s.append("</defs>")
-    s.append(f'<g clip-path="url(#page)"><rect width="{W}" height="{h}" fill="url(#bg)"/>{"".join(body)}</g>')
-    return "".join(s)
+        clip = f'<rect width="{W}" height="{h}"/>'
+    return f'<defs><clipPath id="page">{clip}</clipPath></defs><rect width="{W}" height="{h}" fill="{PAGE}"/>'
 
 
 PARTICLE_CSS = (
-    ".mo{animation:mo ease-in-out infinite alternate}@keyframes mo{from{transform:translate(0,0)}to{transform:translate(var(--dx),var(--dy))}}"
-    ".tw{animation:tw ease-in-out infinite}@keyframes tw{50%{opacity:.15}}"
-    ".st{animation:st linear infinite}@keyframes st{from{transform:translateX(-80px)}to{transform:translateX(1080px)}}"
-    ".sp{transform-box:fill-box;transform-origin:center;animation:sp ease-in-out infinite}"
-    "@keyframes sp{0%,100%{transform:scale(.5) rotate(0deg);opacity:.2}50%{transform:scale(1.15) rotate(90deg);opacity:1}}"
-    ".em{animation:em ease-out infinite}@keyframes em{0%{transform:translateY(14px);opacity:0}25%{opacity:1}100%{transform:translateY(-22px);opacity:0}}"
+    ".tw{animation:tw ease-in-out infinite}@keyframes tw{50%{opacity:.08}}"
+    ".dr{animation:dr ease-in-out infinite alternate}@keyframes dr{to{transform:translate(var(--dx),var(--dy))}}"
+    ".ss{animation:ss linear infinite}"
+    "@keyframes ss{0%{transform:translate(0,0);opacity:0}1.5%{opacity:1}7%{transform:translate(var(--sx),var(--sy));opacity:0}"
+    "100%{transform:translate(var(--sx),var(--sy));opacity:0}}"
 )
 
 
-def particles(name, density=13):
-    """Animated background particles for one slice. Their kind and colour depend on the page position."""
-    y0, h = OFFSET[name]
-    rng = random.Random(f"particles-{name}")
-    out = []
-    for _ in range(max(3, round(h * density / 100))):
-        x, y = rng.uniform(10, W - 10), rng.uniform(9, h - 9)
-        # blend zones near their boundaries so the change is gradual
-        yy = y0 + y + rng.uniform(-90, 90)
-        kind, cols = ZONES[0][1], ZONES[0][2]
-        for start, k, c in ZONES:
-            if yy >= start:
-                kind, cols = k, c
-        col = rng.choice(cols)
-        d = f"animation-duration:{f(rng.uniform(4, 9))}s;animation-delay:-{f(rng.uniform(0, 9))}s"
-        if kind == "motes":
-            r = rng.choice([.8, 1, 1.2, 1.6, 2.2])
-            halo = f'<circle cx="{f(x)}" cy="{f(y)}" r="{r * 3}" fill="{col}" opacity=".14"/>' if r > 1.4 and col != "#ffffff" else ""
-            out.append(f'<g class="mo" style="--dx:{f(rng.uniform(-60, 60))}px;--dy:{f(rng.uniform(-5, 5))}px;'
-                       f'animation-duration:{f(rng.uniform(14, 30))}s;animation-delay:-{f(rng.uniform(0, 30))}s">{halo}'
-                       f'<circle class="tw" style="{d}" cx="{f(x)}" cy="{f(y)}" r="{r}" fill="{col}" opacity="{rng.uniform(.45, .95):.2f}"/></g>')
-        elif kind == "streaks":
-            w = rng.uniform(10, 46)
-            dur = rng.uniform(7, 18)
-            out.append(f'<rect class="st" style="animation-duration:{f(dur)}s;animation-delay:-{f(rng.uniform(0, dur))}s" '
-                       f'x="{f(-w)}" y="{f(y)}" width="{f(w)}" height="{rng.choice([1, 1.2, 1.6])}" rx=".8" fill="{col}" '
-                       f'opacity="{rng.uniform(.25, .75):.2f}"/>')
-        elif kind == "sparks":
-            a = rng.choice([3, 4, 5])
-            shape = (f'<path d="M{f(x - a)},{f(y)}H{f(x + a)}M{f(x)},{f(y - a)}V{f(y + a)}" stroke="{col}" stroke-width="1.2" fill="none"/>'
-                     if rng.random() < .6 else
-                     f'<circle cx="{f(x)}" cy="{f(y)}" r="{a - 1}" stroke="{col}" stroke-width="1.1" fill="none"/>')
-            out.append(f'<g class="sp" style="{d}">{shape}</g>')
-        else:  # embers
-            r = rng.choice([.9, 1.2, 1.6, 2])
-            y = min(max(y, 26), h - 18)
-            out.append(f'<circle class="em" style="{d}" cx="{f(x)}" cy="{f(y)}" r="{r}" fill="{col}"/>')
+def particles(name, density=None):
+    """The live background: one starfield that runs behind the whole page. Every slice draws its own
+    stretch of it with the same density as the hero, so the field reads as continuous."""
+    _, h = OFFSET[name]
+    rng = random.Random(f"stars-{name}")
+    out = ['<g clip-path="url(#page)" fill="#fff">']
+    for i in range(round(W * h / 7000)):                     # still stars, some twinkling
+        x, y = rng.uniform(0, W), rng.uniform(0, h)
+        r = rng.choice([.5, .5, .6, .7, .8, 1.1])
+        tw = (f' class="tw" style="animation-duration:{f(rng.uniform(4, 8))}s;animation-delay:-{f(rng.uniform(0, 8))}s"'
+              if i % 5 == 0 else "")
+        out.append(f'<circle{tw} cx="{f(x)}" cy="{f(y)}" r="{r}" opacity="{rng.uniform(.12, .6):.2f}"/>')
+    for _ in range(max(2, round(h / 90))):                   # slow drifting dust
+        x, y = rng.uniform(40, W - 40), rng.uniform(20, h - 20)
+        r = rng.choice([1, 1.3, 1.6])
+        out.append(f'<g class="dr" style="--dx:{f(rng.uniform(-50, 50))}px;--dy:{f(rng.uniform(-6, 6))}px;'
+                   f'animation-duration:{f(rng.uniform(16, 32))}s;animation-delay:-{f(rng.uniform(0, 32))}s">'
+                   f'<circle cx="{f(x)}" cy="{f(y)}" r="{r * 3.2:.1f}" opacity=".05"/>'
+                   f'<circle cx="{f(x)}" cy="{f(y)}" r="{r}" opacity=".7"/></g>')
+    if h >= 300 or rng.random() < .3:                        # a shooting star now and then
+        x, y = rng.uniform(80, 640), rng.uniform(20, max(30, h - 120))
+        dist, ang = rng.uniform(220, 360), math.radians(rng.uniform(14, 28))
+        dx, dy = dist * math.cos(ang), dist * math.sin(ang)
+        tail = 70
+        out.append('<defs><linearGradient id="sst" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+                   '<stop offset="1" stop-color="#fff" stop-opacity=".9"/></linearGradient></defs>')
+        out.append(f'<g class="ss" style="--sx:{f(dx)}px;--sy:{f(dy)}px;animation-duration:{f(rng.uniform(11, 19))}s;'
+                   f'animation-delay:-{f(rng.uniform(0, 19))}s"><g transform="translate({f(x)} {f(y)}) rotate({f(math.degrees(ang))})">'
+                   f'<rect x="-{tail}" y="-.6" width="{tail}" height="1.2" fill="url(#sst)"/><circle r="1.3"/></g></g>')
+    out.append("</g>")
     return "".join(out)
 
 
@@ -282,18 +243,19 @@ GLOW = ('<filter id="neon" x="-10%" y="-60%" width="120%" height="220%"><feGauss
         '<feMerge><feMergeNode in="a"/><feMergeNode in="a"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>')
 GLOW += ('<filter id="halo" x="-300%" y="-300%" width="700%" height="700%"><feGaussianBlur stdDeviation="5" result="a"/>'
          '<feMerge><feMergeNode in="a"/><feMergeNode in="a"/><feMergeNode in="SourceGraphic"/></feMerge></filter>')
-NEON_CSS = (".neon{animation:neon 7s linear infinite}"
-            "@keyframes neon{0%,91%,100%{opacity:1}92%{opacity:.5}93.5%{opacity:1}95%{opacity:.72}96%{opacity:1}}")
+NEON_CSS = ""
+LINE = 'fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="3.3"'
 
 
-def neon_heading(index, title, color, y):
-    """Outlined neon section title with its small index label. Needs GLOW in <defs> and NEON_CSS."""
-    size = 62
-    k = size / _FONTS["inter-800"]["upm"]
-    outline, _ = text(title, 58, y, size, "inter-800", spacing=7,
-                      attrs=f'fill="{color}" fill-opacity=".1" stroke="{color}" stroke-width="{1.7 / k:.1f}" stroke-linejoin="round"')
-    return (label(f"{index:02d}", 61, y - 68, color, .8, size=13, spacing=3)
-            + f'<g class="neon" filter="url(#neon)">{outline}</g>')
+def neon_heading(index, title, color=None, y=132):
+    """Section title in the hero's line-drawn letters, with an index and a rule that runs to the edge."""
+    u = 5.2
+    top = y - 6 * u
+    paths, width, _ = glyphs(title, 104, top, u)
+    return (label(f"{index:02d}", 60, y - 9, DIM, 1, size=13, spacing=2)
+            + f'<g {LINE} stroke="#fff" stroke-opacity=".1" stroke-width="7">{paths}</g>'
+            + f'<g {LINE} stroke="{INK}" stroke-width="2.1">{paths}</g>'
+            + f'<rect x="{f(104 + width + 30)}" y="{f(y - 3 * u)}" width="{f(940 - 104 - width - 30)}" height="1" fill="#fff" fill-opacity=".1"/>')
 
 
 def arrow(x, y, color, size=14):
@@ -302,15 +264,15 @@ def arrow(x, y, color, size=14):
             f'fill="none" stroke="{color}" stroke-width="1.8" stroke-linecap="square"/>')
 
 
-def hairline(y, color, name):
+def hairline(y, color=None, name=None):
     """Thin divider with a light that travels along it."""
-    return (f'<defs><linearGradient id="hl" x1="0" x2="1"><stop offset="0" stop-color="{color}" stop-opacity=".5"/>'
-            f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></linearGradient>'
-            f'<linearGradient id="bm" x1="0" x2="1"><stop offset="0" stop-color="{color}" stop-opacity="0"/>'
-            f'<stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="{color}" stop-opacity="0"/></linearGradient>'
+    return ('<defs><linearGradient id="hl" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/>'
+            '<stop offset="1" stop-color="#fff" stop-opacity=".02"/></linearGradient>'
+            '<linearGradient id="bm" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+            '<stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
             f'<clipPath id="hc"><rect x="60" y="{y - 2}" width="880" height="4"/></clipPath></defs>'
             f'<rect x="60" y="{y - .5}" width="880" height="1" fill="url(#hl)"/>'
-            f'<g clip-path="url(#hc)"><rect class="beam" x="60" y="{y - .8}" width="170" height="1.6" fill="url(#bm)"/></g>')
+            f'<g clip-path="url(#hc)"><rect class="beam" x="60" y="{y - .7}" width="170" height="1.4" fill="url(#bm)"/></g>')
 
 
-BEAM_CSS = ".beam{animation:beam 7s linear infinite backwards}@keyframes beam{from{transform:translateX(-180px)}to{transform:translateX(900px)}}"
+BEAM_CSS = ".beam{animation:beam 9s linear infinite backwards}@keyframes beam{from{transform:translateX(-180px)}to{transform:translateX(900px)}}"

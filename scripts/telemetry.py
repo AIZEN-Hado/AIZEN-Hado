@@ -76,36 +76,34 @@ def active_days(days):
     return sum(1 for _, count, _ in days if count)
 
 
-LEVELS = {  # level -> (radius, colour, opacity)
-    "NONE": (1.1, "#ffffff", .10), "FIRST_QUARTILE": (2.0, sf.CYAN, .45), "SECOND_QUARTILE": (2.8, sf.CYAN, .68),
-    "THIRD_QUARTILE": (3.6, "#67e8f9", .88), "FOURTH_QUARTILE": (4.4, "#cffafe", 1.0),
+LEVELS = {  # level -> (radius, opacity)
+    "NONE": (1.1, .09), "FIRST_QUARTILE": (2.0, .35), "SECOND_QUARTILE": (2.8, .55),
+    "THIRD_QUARTILE": (3.6, .78), "FOURTH_QUARTILE": (4.4, 1.0),
 }
-LANG_COLORS = [sf.CYAN, sf.BLUE, "#a78bfa", sf.PINK, AMBER, "#64748b"]
+LANG_SHADES = [1, .66, .46, .32, .22, .12]
 
 
 def render(data):
     name = "telemetry"
     _, H = sf.OFFSET[name]
     live = data["total"] is not None
-    css = (sf.PARTICLE_CSS + sf.NEON_CSS +
+    css = (sf.PARTICLE_CSS +
            ".col{animation:wave 7s linear infinite}@keyframes wave{0%,9%,100%{opacity:1}4.5%{opacity:.25}}"
            ".now{animation:now 2s ease-in-out infinite}@keyframes now{50%{opacity:.35}}")
     alt = (f'Telemetry: {data["total"]} contributions in the last 12 months, {active_days(data["days"])} active days, '
            f'{data["repos"]} public repositories') if live else "Telemetry: awaiting first sync"
     s = [svg_open(W, H, alt, css), sf.backdrop(name),
          f'<defs>{sf.GLOW}<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9"/></filter></defs>',
-         sf.particles(name, density=9)]
-    s.append(sf.neon_heading(2, "TELEMETRY", sf.CYAN, 132))
+         sf.particles(name)]
+    s.append(sf.neon_heading(5, "TELEMETRY"))
 
     stats = [(data["total"], "CONTRIBUTIONS / 12 MONTHS"), (active_days(data["days"]) if live else None, "ACTIVE DAYS"),
              (data["repos"], "PUBLIC REPOSITORIES")]
     for i, (value, caption) in enumerate(stats):
         x = 60 + i * 310
         shown = f"{value:,}" if value is not None else "--"
-        glow, _ = sf.text(shown, x, 236, 58, "inter-800", attrs=f'fill="{sf.CYAN}" fill-opacity=".55" filter="url(#soft)"')
-        num, _ = sf.text(shown, x, 236, 58, "inter-800")
-        s.append(glow + num)
-        s.append(sf.label(caption, x + 2, 266, "#67e8f9", .8, size=12))
+        s.append(sf.text(shown, x, 236, 58, "inter-800", attrs=f'fill="{sf.INK}"')[0])
+        s.append(sf.label(caption, x + 2, 266, sf.DIM, 1, size=12))
 
     # one dot per day, a column per week
     pitch, y0 = 16.4, 312
@@ -116,19 +114,17 @@ def render(data):
     cols = [[] for _ in range(weeks)]
     for i, (_, count, level) in enumerate(data["days"]):
         col, row = divmod(offset + i, 7)
-        r, color, op = LEVELS.get(level, LEVELS["NONE"])
+        r, op = LEVELS.get(level, LEVELS["NONE"])
         cx, cy = x0 + col * pitch, y0 + row * pitch
         if i == len(data["days"]) - 1 and live:
-            cols[col].append(f'<circle class="now" cx="{f(cx)}" cy="{f(cy)}" r="{max(r, 2.8)}" fill="{AMBER}"/>')
+            cols[col].append(f'<circle class="now" cx="{f(cx)}" cy="{f(cy)}" r="{max(r, 3)}" fill="#fff"/>')
             continue
-        if r >= 3.6:
-            cols[col].append(f'<circle cx="{f(cx)}" cy="{f(cy)}" r="{r * 2.2:.1f}" fill="{sf.CYAN}" opacity=".16"/>')
-        cols[col].append(f'<circle cx="{f(cx)}" cy="{f(cy)}" r="{r}" fill="{color}" opacity="{op}"/>')
+        cols[col].append(f'<circle cx="{f(cx)}" cy="{f(cy)}" r="{r}" fill="#fff" opacity="{op}"/>')
     for c, dots in enumerate(cols):
         s.append(f'<g class="col" style="animation-delay:{c * 0.06:.2f}s">{"".join(dots)}</g>')
 
     if not live:
-        s.append(sf.label("AWAITING FIRST SYNC", 500, 452, "#67e8f9", .7, size=12, spacing=4, anchor="middle"))
+        s.append(sf.label("AWAITING FIRST SYNC", 500, 452, sf.DIM, 1, size=12, spacing=4, anchor="middle"))
     elif data["langs"]:
         total = sum(data["langs"].values())
         top = sorted(data["langs"].items(), key=lambda kv: -kv[1])[:5]
@@ -136,16 +132,16 @@ def render(data):
         if rest > 0:
             top.append(("Other", rest))
         x = 60.0
-        for (lang, size), color in zip(top, LANG_COLORS):
+        for (lang, size), shade in zip(top, LANG_SHADES):
             w = 880 * size / total
-            s.append(f'<rect x="{f(x)}" y="436" width="{f(max(w - 3, 1))}" height="4" rx="2" fill="{color}"/>')
+            s.append(f'<rect x="{f(x)}" y="436" width="{f(max(w - 3, 1))}" height="3" fill="#fff" fill-opacity="{shade}"/>')
             x += w
         slot = 880 / len(top)
-        for i, ((lang, size), color) in enumerate(zip(top, LANG_COLORS)):
+        for i, ((lang, size), shade) in enumerate(zip(top, LANG_SHADES)):
             lx = 60 + i * slot
             short = {"Jupyter Notebook": "Jupyter"}.get(lang, lang).upper()[:12]
-            s.append(f'<circle cx="{f(lx + 4)}" cy="460" r="4" fill="{color}"/>')
-            s.append(sf.label(f"{short} {round(100 * size / total)}%", lx + 16, 464, "#dbeafe", .8, size=11, spacing=1))
+            s.append(f'<rect x="{f(lx)}" y="455" width="8" height="8" fill="#fff" fill-opacity="{shade}"/>')
+            s.append(sf.label(f"{short} {round(100 * size / total)}%", lx + 16, 464, sf.BODY, 1, size=11, spacing=1))
     s.append("</svg>")
     return "".join(s)
 
