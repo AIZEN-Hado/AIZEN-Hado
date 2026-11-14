@@ -165,5 +165,149 @@
     "Cloud Computing (NPTEL)",
     "Generative AI with watsonx (IBM)",
     "Full Stack (Ethnus)"
+  ],
+  "stack": [
+    {
+      "group": "LANGUAGES",
+      "color": "YELLOW",
+      "items": [
+        [
+          "Py",
+          "Python"
+        ],
+        [
+          "Js",
+          "JavaScript"
+        ],
+        [
+          "Ts",
+          "TypeScript"
+        ],
+        [
+          "Jv",
+          "Java"
+        ]
+      ]
+    },
+    {
+      "group": "AI / ML",
+      "color": "ORANGE",
+      "items": [
+        [
+          "Pt",
+          "PyTorch"
+        ],
+        [
+          "Pd",
+          "Pandas"
+        ],
+        [
+          "Np",
+          "NumPy"
+        ]
+      ]
+    },
+    {
+      "group": "FRONTEND",
+      "color": "AQUA",
+      "items": [
+        [
+          "Re",
+          "React"
+        ],
+        [
+          "Ht",
+          "HTML5"
+        ],
+        [
+          "Cs",
+          "CSS3"
+        ],
+        [
+          "Tw",
+          "Tailwind CSS"
+        ]
+      ]
+    },
+    {
+      "group": "BACKEND",
+      "color": "VIOLET",
+      "items": [
+        [
+          "Nd",
+          "Node.js"
+        ],
+        [
+          "Ex",
+          "Express.js"
+        ],
+        [
+          "Dj",
+          "Django"
+        ],
+        [
+          "Sb",
+          "Spring Boot"
+        ]
+      ]
+    },
+    {
+      "group": "DATABASES",
+      "color": "PINK",
+      "items": [
+        [
+          "Pg",
+          "PostgreSQL"
+        ],
+        [
+          "Mg",
+          "MongoDB"
+        ],
+        [
+          "Rd",
+          "Redis"
+        ]
+      ]
+    },
+    {
+      "group": "CLOUD + DEVOPS",
+      "color": "SKY",
+      "items": [
+        [
+          "Dk",
+          "Docker"
+        ],
+        [
+          "Aw",
+          "AWS"
+        ],
+        [
+          "Gc",
+          "Google Cloud"
+        ]
+      ]
+    },
+    {
+      "group": "TOOLS",
+      "color": "LIME",
+      "items": [
+        [
+          "Gt",
+          "Git"
+        ],
+        [
+          "Vs",
+          "VS Code"
+        ],
+        [
+          "Pm",
+          "Postman"
+        ],
+        [
+          "Vt",
+          "Vite"
+        ]
+      ]
+    }
   ]
 }

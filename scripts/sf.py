@@ -171,6 +171,8 @@ PAGE = "#030405"                                   # matches the bottom of the h
 INK, BODY, DIM = "#f4f6fa", "#9aa0aa", "#5d636d"   # text: strong, body, labels
 # colour is reserved for the 3D objects
 ICE, EMBER, MOSS, ROSE = "#8fb3ff", "#ff9e64", "#9ece6a", "#f7768e"
+# vibrant set used by the 3D objects and the stack table
+SKY, AQUA, VIOLET, PINK, YELLOW, ORANGE, LIME = "#00bbf9", "#00f5d4", "#9b5de5", "#f15bb5", "#fee440", "#ff7b39", "#b8f35a"
 
 
 def _at(name, frac=0.0):

@@ -1,7 +1,6 @@
-"""The whole profile as one tall, live SVG.
+"""The profile as two tall, live SVGs (above and below the coder GIF).
 
-GitHub can't layer a background behind several images, so everything is drawn into a single
-canvas: one starfield and one stream of rising particles run behind every section, and each
+GitHub can't layer a background behind several images, so each canvas draws everything itself: one starfield and one stream of rising particles run behind every section, and each
 section adds a 3D object (the only colour on the page).
 
 How the 3D works without JavaScript:
@@ -32,9 +31,9 @@ def phase_delays(theta, half):
 
 
 # =============================================================================== layout
-def layout(cfg):
-    sections = [("hero", 480), ("about", 560), ("focus", 520), ("journey", 460),
-                ("interlude", 500), ("telemetry", 610), ("contact", 440)]
+def layout(part):
+    sections = {"top": [("hero", 480), ("about", 560), ("focus", 520), ("journey", 470)],
+                "bottom": [("stack", 760), ("telemetry", 610), ("contact", 440)]}[part]
     out, y = {}, 0
     for name, h in sections:
         out[name] = (y, h)
@@ -195,8 +194,9 @@ def solid(shape, cx, cy, R, color, period=18, samples=36, width=1.5, tilt=(.5, .
 def helix(x0, x1, cy, A, color, n=70, turns=3.2, period=12):
     """Two strands twisting around the timeline axis."""
     half = period / 2
-    out = [f'<g fill="{color}">']
+    out = []
     for strand in (0, 1):
+        out.append(f'<g fill="{color[strand]}">')
         for i in range(n):
             u = i / (n - 1)
             x = x0 + (x1 - x0) * u
@@ -207,7 +207,7 @@ def helix(x0, x1, cy, A, color, n=70, turns=3.2, period=12):
             out.append(f'<g class="gy" style="--a:{A}px;animation-duration:{half}s;animation-delay:-{d1:.2f}s">'
                        f'<circle class="gz" style="--lo:{.06 * fade:.2f};--hi:{.95 * fade:.2f};animation-duration:{half}s;'
                        f'animation-delay:-{d2:.2f}s" cx="{f(x)}" cy="{cy}" r="{2.2 if i % 2 else 1.6}"/></g>')
-    out.append("</g>")
+        out.append("</g>")
     return "".join(out)
 
 
@@ -251,12 +251,12 @@ def about(cfg, y0):
         s.append(sf.label(key, 76, y - 9, sf.DIM, 1, size=11))
         s.append(sf.text(value, 76, y + 13, 17, "inter-400", attrs=f'fill="{sf.INK}"')[0])
         y += 52
-    s.append(globe(780, 300, 150, sf.ICE))
+    s.append(globe(780, 300, 150, sf.SKY))
     s.append("</g>")
     return "".join(s)
 
 
-FOCUS_COLORS = [sf.EMBER, sf.ROSE, sf.MOSS]
+FOCUS_COLORS = [sf.YELLOW, sf.PINK, sf.AQUA]
 
 
 def focus(cfg, y0):
@@ -279,9 +279,9 @@ CSS_JOURNEY = (".ring{transform-box:fill-box;transform-origin:center;animation:r
 def journey(cfg, y0):
     s = [f'<g transform="translate(0 {y0})">', heading(3, "JOURNEY", 132)]
     line_y, xs = 268, [120, 500, 880]
-    s.append(glow("journey", 500, line_y, 420, sf.MOSS, .05))
+    s.append(glow("journey", 500, line_y, 420, sf.VIOLET, .07))
     s.append(f'<rect x="120" y="{line_y - .5}" width="760" height="1" fill="#fff" fill-opacity=".14"/>')
-    s.append(helix(100, 900, line_y, 30, sf.MOSS))
+    s.append(helix(100, 900, line_y, 30, (sf.VIOLET, sf.PINK)))
     for i, (n, x) in enumerate(zip(cfg["journey"], xs)):
         anchor = ("start", "middle", "end")[i]
         s.append(f'<circle class="ring" style="animation-delay:-{i * 1.1:.1f}s" cx="{x}" cy="{line_y}" r="8" fill="none" stroke="#fff"/>')
@@ -295,103 +295,56 @@ def journey(cfg, y0):
     return "".join(s)
 
 
-# =============================================================================== interlude
-CSS_CODER = (
-    ".cs{animation:cs 15.4s steps(11) infinite}@keyframes cs{to{transform:translateY(-176px)}}"
-    ".ty{animation:ty 1.4s steps(16) infinite}@keyframes ty{from{transform:scaleX(0)}to{transform:scaleX(1)}}"
-    ".cu{animation:cu 1.4s steps(16) infinite}@keyframes cu{from{transform:translateX(0)}to{transform:translateX(var(--w))}}"
-    ".bl{animation:bl .7s steps(1) infinite}@keyframes bl{50%{opacity:0}}"
-    ".br{animation:br 4.6s ease-in-out infinite alternate}@keyframes br{to{transform:translateY(-2px)}}"
-    ".hd{transform-origin:530px 372px;animation:hd 7s ease-in-out infinite alternate}@keyframes hd{0%{transform:rotate(-1.6deg)}100%{transform:rotate(1.4deg)}}"
-    ".sm{animation:sm 3.2s linear infinite}@keyframes sm{0%{stroke-dashoffset:0;opacity:0}20%{opacity:.5}100%{stroke-dashoffset:-48;opacity:0}}"
-    ".up{animation:up ease-out infinite}@keyframes up{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-120px);opacity:0}}"
-    ".gl{animation:gl 6s ease-in-out infinite}@keyframes gl{50%{opacity:.75}}"
-)
-TOKEN_COLORS = [("#ffffff", .82), ("#ffffff", .42), ("#ffffff", .26), (sf.ICE, .85), (sf.EMBER, .85), (sf.MOSS, .8), (sf.ROSE, .8)]
+# =============================================================================== stack
+CSS_STACK = (".tg{animation:tg 6s ease-in-out infinite}@keyframes tg{0%,100%{opacity:.25}12%{opacity:1}30%{opacity:.25}}"
+             ".tb{animation:tb 6s ease-in-out infinite}@keyframes tb{0%,100%{opacity:.55}12%{opacity:1}30%{opacity:.55}}")
 
 
-def code_line(rng, x, y, max_w=280):
-    """One line of 'code': indented tokens as rounded bars, coloured like syntax highlighting."""
-    indent = rng.choice([0, 0, 16, 16, 32, 48])
-    out, cx = [], x + indent
-    for _ in range(rng.randint(2, 6)):
-        w = rng.choice([10, 14, 18, 24, 30, 38, 52])
-        if cx + w > x + max_w:
-            break
-        col, op = rng.choice(TOKEN_COLORS)
-        out.append(f'<rect x="{cx}" y="{y}" width="{w}" height="5" rx="2.5" fill="{col}" fill-opacity="{op}"/>')
-        cx += w + 6
-    return "".join(out), cx - x
-
-
-def interlude(y0):
-    """A coder seen over the shoulder, rim-lit by a monitor where code keeps typing itself. No words."""
-    rng = random.Random("coder")
-    sx, sy, sw, sh = 362, 64, 336, 226               # screen
-    s = [f'<g transform="translate(0 {y0})">',
-         '<defs>'
-         '<radialGradient id="c-spill" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#cfe0ff" stop-opacity=".11"/>'
-         '<stop offset="1" stop-color="#cfe0ff" stop-opacity="0"/></radialGradient>'
-         '<linearGradient id="c-scr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1018"/>'
-         '<stop offset="1" stop-color="#06080c"/></linearGradient>'
-         '<linearGradient id="c-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8f0ff" stop-opacity=".75"/>'
-         '<stop offset=".45" stop-color="#e8f0ff" stop-opacity=".22"/><stop offset="1" stop-color="#e8f0ff" stop-opacity="0"/></linearGradient>'
-         '<linearGradient id="c-desk" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-         '<stop offset=".5" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
-         f'<clipPath id="c-screen"><rect x="{sx + 10}" y="{sy + 10}" width="{sw - 20}" height="{sh - 20}" rx="3"/></clipPath>'
-         '</defs>']
-    # light the screen throws into the room
-    s.append(f'<ellipse class="gl" cx="530" cy="190" rx="360" ry="230" fill="url(#c-spill)"/>')
-    s.append(f'<ellipse cx="530" cy="344" rx="300" ry="16" fill="url(#c-spill)"/>')
-    # desk
-    s.append('<rect x="150" y="336" width="760" height="1.2" fill="url(#c-desk)"/>')
-    # monitor
-    s.append(f'<rect x="{sx}" y="{sy}" width="{sw}" height="{sh}" rx="9" fill="url(#c-scr)" stroke="#fff" stroke-opacity=".22"/>')
-    s.append(f'<path d="M522,{sy + sh}V326M500,334H560" stroke="#fff" stroke-opacity=".22" stroke-width="2" fill="none"/>')
-    # code: a block that steps up a line at a time, plus the line being typed
-    lines = []
-    for i in range(22):
-        svg, _ = code_line(rng, sx + 22, sy + 24 + i * 16)
-        lines.append(svg)
-    s.append(f'<g clip-path="url(#c-screen)"><g class="cs">{"".join(lines)}</g>')
-    ty_y = sy + 24 + 11 * 16
-    typed_svg, typed_w = code_line(random.Random("typed"), sx + 22, ty_y)
-    s.append(f'<rect x="{sx + 10}" y="{ty_y - 6}" width="{sw - 20}" height="17" fill="#0a0e15"/>')
-    s.append(f'<g class="ty" style="transform-origin:{sx + 22}px 0">{typed_svg}</g>')
-    s.append(f'<rect class="cu" style="--w:{f(typed_w)}px" x="{sx + 24}" y="{ty_y - 3}" width="2" height="11" fill="{AMBER}"/>')
-    s.append("</g>")
-    # sparks of light drifting up off the screen
-    for i in range(16):
-        x = rng.uniform(sx + 20, sx + sw - 20)
-        dur = rng.uniform(4, 8)
-        s.append(f'<circle class="up" style="animation-duration:{f(dur)}s;animation-delay:-{f(rng.uniform(0, dur))}s" '
-                 f'cx="{f(x)}" cy="{sy - 4}" r="{rng.choice([.8, 1, 1.3])}" fill="#fff"/>')
-    # mug with steam, and a small plant
-    s.append('<path d="M752,306h26v24a6,6 0 0 1 -6,6h-14a6,6 0 0 1 -6,-6Z" fill="#07090d" stroke="#fff" stroke-opacity=".35"/>'
-             '<path d="M778,312h4a6,6 0 0 1 0,12h-4" fill="none" stroke="#fff" stroke-opacity=".35"/>')
-    for k, x in enumerate((760, 770)):
-        s.append(f'<path class="sm" style="animation-delay:-{k * 1.6}s" d="M{x},300c-6,-8 6,-14 0,-22c-6,-8 6,-14 0,-22" '
-                 f'fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="14 34"/>')
-    s.append('<path d="M262,336h28l-4,-22h-20Z" fill="#07090d" stroke="#fff" stroke-opacity=".3"/>'
-             '<path d="M276,314c0,-18 -14,-26 -22,-32M276,314c0,-22 8,-34 20,-40M276,314c-2,-12 -10,-16 -16,-16" '
-             'fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="1.3" stroke-linecap="round"/>')
-    # the coder, from behind: silhouette that hides the screen, outlined by its light
-    body = ("M372,500C378,436 404,404 452,392C478,386 494,378 500,366H560C566,378 582,386 608,392"
-            "C656,404 682,436 688,500Z")
-    hood = "M486,372C484,350 500,344 530,344C560,344 576,350 574,372C560,380 500,380 486,372Z"
-    s.append(f'<g class="br"><path d="{body}" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.6"/>'
-             f'<path d="{hood}" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.4"/>')
-    s.append('<g class="hd">'
-             f'<path d="M517,372V352H543V372Z" fill="{sf.PAGE}"/>'
-             f'<ellipse cx="530" cy="314" rx="39" ry="45" fill="{sf.PAGE}" stroke="url(#c-rim)" stroke-width="1.6"/>'
-             # a few strands of hair catching the light
-             '<path d="M500,284c10,-12 34,-16 52,-6M512,276c12,-6 28,-6 40,2" fill="none" stroke="#e8f0ff" stroke-opacity=".28" stroke-width="1.1" stroke-linecap="round"/>'
-             # headphones
-             '<path d="M490,318C488,280 506,262 530,262C554,262 572,280 570,318" fill="none" stroke="#e8f0ff" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/>'
-             f'<rect x="481" y="300" width="15" height="34" rx="6" fill="#0c0f14" stroke="#e8f0ff" stroke-opacity=".4"/>'
-             f'<rect x="564" y="300" width="15" height="34" rx="6" fill="#0c0f14" stroke="#e8f0ff" stroke-opacity=".4"/>'
-             f'<circle class="bl" cx="571.5" cy="308" r="1.6" fill="{AMBER}"/>'
-             '</g></g>')
+def stack(cfg, y0):
+    """The stack as a periodic table: one element per tool, a column per group, coloured by group.
+    A pulse of light sweeps across the table and every element has an electron in orbit."""
+    groups = cfg["stack"]
+    tw, th, gx, gy = 108, 104, 12, 12
+    rows = max(len(g["items"]) for g in groups)
+    x0 = (W - (len(groups) * tw + (len(groups) - 1) * gx)) / 2
+    top = 196
+    s = [f'<g transform="translate(0 {y0})">', heading(4, "STACK", 132)]
+    defs = []
+    n = 0
+    for c, g in enumerate(groups):
+        color = getattr(sf, g["color"])
+        defs.append(f'<linearGradient id="c-tile-{c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{color}" stop-opacity=".16"/>'
+                    f'<stop offset="1" stop-color="{color}" stop-opacity=".02"/></linearGradient>')
+        for r, (sym, name) in enumerate(g["items"]):
+            n += 1
+            row = rows - len(g["items"]) + r                       # columns hang from the bottom
+            x, y = x0 + c * (tw + gx), top + row * (th + gy)
+            delay = (c + row * .6) * .32
+            cx, cy = x + tw / 2, y + 50
+            s.append(f'<rect x="{f(x)}" y="{f(y)}" width="{tw}" height="{th}" rx="10" fill="url(#c-tile-{c})"/>')
+            s.append(f'<rect class="tb" style="animation-delay:{delay:.2f}s" x="{f(x + .6)}" y="{f(y + .6)}" width="{tw - 1.2}" '
+                     f'height="{th - 1.2}" rx="9.5" fill="none" stroke="{color}" stroke-opacity=".7" stroke-width="1.2"/>')
+            s.append(f'<rect class="tg" style="animation-delay:{delay:.2f}s" x="{f(x - 3)}" y="{f(y - 3)}" width="{tw + 6}" '
+                     f'height="{th + 6}" rx="13" fill="none" stroke="{color}" stroke-opacity=".22" stroke-width="5"/>')
+            s.append(sf.label(f"{n:02d}", x + 10, y + 19, color, .9, size=10, spacing=1))
+            # electron orbit behind the symbol
+            orbit = f"M{f(cx - 36)},{f(cy - 10)}a36,10 0 1 0 72,0a36,10 0 1 0 -72,0"
+            s.append(f'<path d="{orbit}" transform="rotate(-18 {f(cx)} {f(cy - 10)})" fill="none" stroke="{color}" stroke-opacity=".18" stroke-dasharray="2 4"/>')
+            s.append(sf.text(sym, cx, cy, 36, "inter-800", anchor="middle", attrs=f'fill="{color}"')[0])
+            s.append(f'<g transform="rotate(-18 {f(cx)} {f(cy - 10)})"><circle r="2.4" fill="#fff"/>'
+                     f'<animateMotion dur="{2.6 + (n % 5) * .45:.2f}s" begin="-{(n * .37) % 3:.2f}s" repeatCount="indefinite" path="{orbit}"/></g>')
+            s.append(sf.text(name, cx, y + 84, 12.5, "inter-400", anchor="middle", attrs=f'fill="{sf.BODY}"')[0])
+    # legend
+    ly = top + rows * (th + gy) + 40
+    widths = [18 + sf.text_width(g["group"], 10, "mono-500", 1.5) for g in groups]
+    gap = (880 - sum(widths)) / (len(groups) - 1)
+    x = 60.0
+    for g, w in zip(groups, widths):
+        color = getattr(sf, g["color"])
+        s.append(f'<rect x="{f(x)}" y="{ly - 9}" width="10" height="10" rx="2" fill="{color}"/>')
+        s.append(sf.label(g["group"], x + 18, ly, sf.BODY, 1, size=10, spacing=1.5))
+        x += w + gap
+    s.insert(1, f"<defs>{''.join(defs)}</defs>")
     s.append("</g>")
     return "".join(s)
 
@@ -403,7 +356,7 @@ CSS_TERRAIN = (".wk{animation:wk 9s ease-in-out infinite}@keyframes wk{0%,14%,10
 
 def telemetry(data, y0):
     live = data["total"] is not None
-    s = [f'<g transform="translate(0 {y0})">', heading(4, "TELEMETRY", 132)]
+    s = [f'<g transform="translate(0 {y0})">', heading(5, "TELEMETRY", 132)]
     active = sum(1 for _, c, _ in data["days"] if c)
     stats = [(data["total"], "CONTRIBUTIONS / 12 MONTHS"), (active if live else None, "ACTIVE DAYS"),
              (data["repos"], "PUBLIC REPOSITORIES")]
@@ -427,7 +380,7 @@ def telemetry(data, y0):
         y = horizon + (front_y - horizon) * z0 / z - height * z0 / z
         return x, y, z0 / z
 
-    s.append(glow("terrain", 500, 470, 440, sf.ICE, .08))
+    s.append(glow("terrain", 500, 470, 440, sf.AQUA, .08))
     grid = []
     for d in range(7):
         xa, ya, _ = cam(-.6, d)
@@ -437,7 +390,7 @@ def telemetry(data, y0):
         xa, ya, _ = cam(wk - .5, -.4)
         xb, yb, _ = cam(wk - .5, 6.4)
         grid.append(f'M{f(xa)},{f(ya)}L{f(xb)},{f(yb)}')
-    s.append(f'<path d="{"".join(grid)}" stroke="{sf.ICE}" stroke-opacity=".12" fill="none"/>')
+    s.append(f'<path d="{"".join(grid)}" stroke="{sf.AQUA}" stroke-opacity=".12" fill="none"/>')
     cols = [[] for _ in range(weeks)]
     for i, (_, count, _) in enumerate(days):
         wk, d = divmod(offset + i, 7)
@@ -453,10 +406,10 @@ def telemetry(data, y0):
                              f'<circle class="now" cx="{f(x)}" cy="{f(ty)}" r="{4 * p:.1f}" fill="{AMBER}"/>')
                 continue
             if count == 0:
-                parts.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="{1.1 * p + .2:.1f}" fill="{sf.ICE}" opacity="{.12 + .2 * p:.2f}"/>')
+                parts.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="{1.1 * p + .2:.1f}" fill="{sf.AQUA}" opacity="{.12 + .2 * p:.2f}"/>')
                 continue
             _, ty, _ = cam(wk, d, 8 + 74 * v)
-            parts.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(ty)}" stroke="{sf.ICE}" '
+            parts.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(ty)}" stroke="{sf.AQUA}" '
                          f'stroke-width="{2.6 * p:.1f}" stroke-opacity="{(.2 + .55 * v) * (.45 + .55 * p):.2f}"/>'
                          f'<circle cx="{f(x)}" cy="{f(ty)}" r="{(1.3 + 1.6 * v) * p:.1f}" fill="#eef3ff" opacity="{(.45 + .55 * v) * (.5 + .5 * p):.2f}"/>')
         s.append(f'<g class="wk" style="animation-delay:{wk * .09:.2f}s">{"".join(parts)}</g>')
@@ -469,27 +422,27 @@ def telemetry(data, y0):
         rest = total - sum(v for _, v in top)
         if rest > 0:
             top.append(("Other", rest))
-        shades = [1, .66, .46, .32, .22, .12]
+        shades = [sf.YELLOW, sf.SKY, sf.PINK, sf.AQUA, sf.VIOLET, "#5d636d"]
         x = 60.0
         for (lang, size), shade in zip(top, shades):
             w = 880 * size / total
-            s.append(f'<rect x="{f(x)}" y="556" width="{f(max(w - 3, 1))}" height="3" fill="#fff" fill-opacity="{shade}"/>')
+            s.append(f'<rect x="{f(x)}" y="555" width="{f(max(w - 3, 1))}" height="4" rx="2" fill="{shade}"/>')
             x += w
         slot = 880 / len(top)
         for i, ((lang, size), shade) in enumerate(zip(top, shades)):
             lx = 60 + i * slot
             short = {"Jupyter Notebook": "Jupyter"}.get(lang, lang).upper()[:12]
-            s.append(f'<rect x="{f(lx)}" y="575" width="8" height="8" fill="#fff" fill-opacity="{shade}"/>')
+            s.append(f'<circle cx="{f(lx + 4)}" cy="579" r="4" fill="{shade}"/>')
             s.append(sf.label(f"{short} {round(100 * size / total)}%", lx + 16, 584, sf.BODY, 1, size=11, spacing=1))
     s.append("</g>")
     return "".join(s)
 
 
 def contact(cfg, y0, h):
-    s = [f'<g transform="translate(0 {y0})">', heading(5, "CONTACT", 132),
+    s = [f'<g transform="translate(0 {y0})">', heading(6, "CONTACT", 132),
          sf.text(cfg.get("contact_line", "Reach me through any of the links below."), 60, 196, 23, "inter-400",
                  attrs=f'fill="{sf.BODY}"')[0]]
-    s.append(wave_field(236, h, sf.EMBER, sf.ROSE))
+    s.append(wave_field(236, h, sf.PINK, sf.VIOLET))
     s.append(f'<defs><linearGradient id="c-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{sf.PAGE}" stop-opacity="0"/>'
              f'<stop offset="1" stop-color="{sf.PAGE}"/></linearGradient></defs>'
              f'<rect y="{h - 70}" width="{W}" height="70" fill="url(#c-fade)"/>')
@@ -498,24 +451,33 @@ def contact(cfg, y0, h):
 
 
 # =============================================================================== the canvas
+def _svg(total, label, css, body, round_top):
+    clip = (f'<path d="M0,6a6,6 0 0 1 6,-6H{W - 6}a6,6 0 0 1 6,6V{total}H0Z"/>' if round_top
+            else f'<rect width="{W}" height="{total}"/>')
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {total}" width="{W}" height="{total}" role="img" '
+            f'aria-label="{sf.esc(label)}"><style>{css}@media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}</style>'
+            f'<defs><clipPath id="c-all">{clip}</clipPath></defs><g clip-path="url(#c-all)">{body}</g></svg>')
+
+
 def build(cfg, hero_svg, data):
-    lay, total = layout(cfg)
+    """Return (top canvas, bottom canvas). The coder GIF sits between them."""
+    lay, total = layout("top")
     hero_inner = hero_svg[hero_svg.index(">") + 1: hero_svg.rindex("</svg>")]
-    css = CSS_BG + CSS_TURN + CSS_JOURNEY + CSS_CODER + CSS_TERRAIN
     label = (f'{cfg["name"]}: AI engineer, LLM systems, full stack. '
              + " ".join("".join(t for t, _ in line) for line in cfg["about"]) + " "
-             + ". ".join(f'{p["title"]}: {" ".join(p["lines"])}' for p in cfg["focus"]) + ".")
-    s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {total}" width="{W}" height="{total}" role="img" '
-         f'aria-label="{sf.esc(label)}"><style>{css}@media (prefers-reduced-motion:reduce){{*{{animation:none!important}}}}</style>',
-         f'<defs><clipPath id="c-all"><path d="M0,6a6,6 0 0 1 6,-6H{W - 6}a6,6 0 0 1 6,6V{total}H0Z"/></clipPath></defs>',
-         '<g clip-path="url(#c-all)">',
-         background(lay["hero"][1], total),
-         f"<g>{hero_inner}</g>",
-         about(cfg, lay["about"][0]), focus(cfg, lay["focus"][0]), journey(cfg, lay["journey"][0]),
-         interlude(lay["interlude"][0]), telemetry(data, lay["telemetry"][0]),
-         contact(cfg, lay["contact"][0], lay["contact"][1]),
-         "</g></svg>"]
-    return "".join(s)
+             + ". ".join(f'{p["title"]}: {" ".join(p["lines"])}' for p in cfg["focus"]) + ". Journey: "
+             + ". ".join(f'{n["when"]}: {n["title"]}, {n["sub"]}' for n in cfg["journey"]) + ".")
+    top = _svg(total, label, CSS_BG + CSS_TURN + CSS_JOURNEY,
+               background(lay["hero"][1], total) + f"<g>{hero_inner}</g>" + about(cfg, lay["about"][0])
+               + focus(cfg, lay["focus"][0]) + journey(cfg, lay["journey"][0]), True)
+
+    lay, total = layout("bottom")
+    label = ("Stack: " + "; ".join(f'{g["group"].title()}: {", ".join(n for _, n in g["items"])}' for g in cfg["stack"])
+             + ". Telemetry: contributions over the last 12 months as a 3D terrain. Contact.")
+    bottom = _svg(total, label, CSS_BG + CSS_TURN + CSS_STACK + CSS_TERRAIN,
+                  background(0, total) + stack(cfg, lay["stack"][0]) + telemetry(data, lay["telemetry"][0])
+                  + contact(cfg, lay["contact"][0], lay["contact"][1]), False)
+    return top, bottom
 
 
 # =============================================================================== link chips + footer
