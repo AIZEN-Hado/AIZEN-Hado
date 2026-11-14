@@ -1,7 +1,7 @@
-# Refreshes the only data-driven image in the profile (assets/telemetry.svg) from GitHub's GraphQL API.
-# Why an Action at all: GitHub caches README images through its camo proxy, and third-party stat
-# services go down or get rate-limited. Rendering our own SVG into the repo keeps the panel fast,
-# on-brand and always available. Everything else in the README is static and needs no automation.
+# Rebuilds the profile once a day. Two images are driven by live data: the accretion disk in the hero (your
+# last 365 days of activity) and the night-sky panel (public commits per repository, plus the moon). Why an
+# Action at all: GitHub caches README images through its camo proxy, and third-party stat services go down or
+# get rate-limited. Rendering our own SVGs into the repo keeps them fast, on-brand and always available.
 name: telemetry
 
 on:
@@ -11,11 +11,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "scripts/telemetry.py"
-      - "scripts/kit.py"
-      - "scripts/canvas.py"
-      - "scripts/canvas.json"
-      - "scripts/glyphs.json"
+      - "scripts/**"
       - ".github/workflows/telemetry.yml"
 
 permissions:
@@ -36,18 +32,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Standard library only. If the API call fails the step fails and the last good panel stays up.
-      - name: Fetch activity and render panel
+      # Standard library only. If an API call fails the step fails and the last good images stay up.
+      - name: Fetch activity and rebuild the profile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_LOGIN: ${{ github.repository_owner }}
-        run: python3 scripts/telemetry.py
+        run: python3 scripts/build.py --fetch
 
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/telemetry.svg assets/static/telemetry.svg scripts/telemetry.json
+          git add -A README.md assets scripts/telemetry.json scripts/canvas.json
           git diff --cached --quiet && { echo "No change."; exit 0; }
           git commit -m "Update telemetry"
           git push

@@ -19,6 +19,7 @@ import telemetry
 from kit import AMBER, EMBER, SILVER, VIOLET, WHITE, f
 
 P = json.loads((kit.ROOT / "scripts" / "profile.json").read_text(encoding="utf-8"))
+DATA = json.loads(telemetry.CACHE.read_text(encoding="utf-8"))
 W, M = 1000, 56                     # canvas width, text margin
 
 
@@ -343,7 +344,7 @@ def footer():
 # ================================================================================================ assembly
 def build_all():
     bands = {b["id"]: b for b in P["bands"]}
-    hero.build(P).save("cosmic-hero.svg", P["contact"]["channels"][0]["url"])
+    hero.build(P, DATA).save("cosmic-hero.svg", P["contact"]["channels"][0]["url"])
     band(bands["identity"], 0)
     identity()
     band(bands["exploring"], 1)
@@ -357,7 +358,7 @@ def build_all():
         caption(pr, k, link)
     also()
     band(bands["telemetry"], 4)
-    telemetry.render(json.loads(telemetry.CACHE.read_text(encoding="utf-8"))).save("telemetry.svg")
+    telemetry.render(DATA).save("telemetry.svg")
     band(bands["frontier"], 5)
     frontier()
     band(bands["contact"], 6)
@@ -381,13 +382,16 @@ def readme():
 
 
 def main():
+    import sys
+    if "--fetch" in sys.argv:
+        telemetry.main()
+        DATA.clear()
+        DATA.update(json.loads(telemetry.CACHE.read_text(encoding="utf-8")))
     lay = kit.LAYOUT
     lay.phase = "collect"                 # pass 1: where does everything sit?
     lay.reset()
     build_all()
     lay.freeze()
-    canvas.row_nodes.cache_clear()
-    canvas.row_edges.cache_clear()
     for old in list((kit.ROOT / "assets").glob("*.svg")) + list((kit.ROOT / "assets").glob("static/*.svg")):
         old.unlink()
     lay.phase = "draw"                    # pass 2: draw, keeping the background clear of all of it
