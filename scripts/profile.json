@@ -1,0 +1,23 @@
+{
+  "name": "Yashsingh Chauhan",
+  "handle": "AIZEN-Hado",
+  "tagline": "AI ENGINEER  /  LLM SYSTEMS  /  FULL STACK",
+  "projects": [
+    { "repo": "Fisherman", "description": "", "tags": "" },
+    { "repo": "LLMtuning", "description": "", "tags": "" },
+    { "repo": "pseudoCV", "description": "", "tags": "" },
+    { "repo": "CLASSLYAI", "description": "", "tags": "" }
+  ],
+  "stack": {
+    "AI / LLM": ["RAG", "GraphRAG", "Multi-Agent", "MCP", "PyTorch"],
+    "BACKEND": ["Python", "FastAPI", "Java", "Spring Boot", "Node.js"],
+    "FRONTEND": ["React", "TypeScript", "Tailwind CSS", "Vite"],
+    "DATA / INFRA": ["PostgreSQL", "MongoDB", "Redis", "Docker", "AWS", "Google Cloud"]
+  },
+  "links": [
+    { "label": "PORTFOLIO", "file": "portfolio" },
+    { "label": "LINKEDIN", "file": "linkedin" },
+    { "label": "EMAIL", "file": "email" },
+    { "label": "WHATSAPP", "file": "whatsapp" }
+  ]
+}
