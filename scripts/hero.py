@@ -186,7 +186,7 @@ def build(profile):
     alt = (f'{profile["name"]}: {profile["tagline"]} '
            'Line-engraved black hole with a lensed neural lattice, labelled photon sphere and innermost stable orbit.')
     doc = kit.Doc(W, H, alt, CSS)
-    clip = kit.plate(doc)
+    clip = kit.plate(doc, density=0)
 
     g = []
     # atmosphere
@@ -223,6 +223,17 @@ def build(profile):
               f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width=".9"/></g>')
     g.append(f'<g transform="rotate({TILT} {CX} {CY})">{glow}{back}{lensed}{shadow}{photon}{front}</g>')
 
+    # the scan: a faint band of light crossing the plate
+    g.append(f'<g class="scan" transform="translate(-200 0)"><rect x="-60" width="120" height="{H}" fill="url(#scanG)"/>'
+             f'<rect x="-.4" width=".8" height="{H}" fill="{AMBER}" fill-opacity=".18"/></g>')
+
+    # melt into the shared canvas below: the bottom edge ends on the same void every slice starts from
+    doc.define(f'<linearGradient id="melt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{VOID}" stop-opacity="0"/>'
+               f'<stop offset="1" stop-color="{VOID}"/></linearGradient>')
+    g.append(f'<rect y="{H - 130}" width="{W}" height="130" fill="url(#melt)"/>')
+    import canvas
+    g.append(canvas.glows(doc))          # the shared glows reach up into the hero; draw them over the melt
+
     # measurement marks around the mass
     rot = math.radians(TILT)
     ticks = []
@@ -238,10 +249,6 @@ def build(profile):
 
     # viewing geometry, bottom right (inclination follows from the disk's axis ratio: acos(0.155) ~ 81 deg)
     g.append(doc.text("SCHWARZSCHILD  ·  i ≈ 81°", W - 40, H - 19, 9.5, "mono-400", SILVER, .55, "end", track=1.6))
-
-    # the scan: a faint band of light crossing the plate
-    g.append(f'<g class="scan" transform="translate(-200 0)"><rect x="-60" width="120" height="{H}" fill="url(#scanG)"/>'
-             f'<rect x="-.4" width=".8" height="{H}" fill="{AMBER}" fill-opacity=".18"/></g>')
 
     # identity
     x = 58

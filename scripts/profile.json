@@ -61,7 +61,7 @@
       ],
       "note": [
         "FOUR REPOSITORIES",
-        "SELECT A PLATE TO OPEN"
+        "SELECT A PANEL TO OPEN"
       ]
     },
     {
@@ -300,6 +300,44 @@
       "name": "InterviewIQ",
       "repo": "3.interviewIQ",
       "note": "AI interview platform"
+    }
+  ],
+  "identity": {
+    "lead": "I work on the layer that decides whether an LLM system survives contact with production:",
+    "bold": "how models are adapted, how agents are evaluated, and how both run as dependable software.",
+    "tail": "Right now that means LoRA fine-tuning infrastructure for open-weight models, a statistical CI gate for LLM agents, and the Python and TypeScript services around them.",
+    "rule_lead": "Working rule across every project below:",
+    "rule": "if a number was not measured, it is not shown.",
+    "meta": "BHOPAL, INDIA  ·  VELLORE INSTITUTE OF TECHNOLOGY  ·  OPEN TO AI ENGINEERING ROLES"
+  },
+  "frontier": [
+    {
+      "q": "Q.01",
+      "title": "Regression, or noise?",
+      "body": "An agent changes: a prompt edit, a model version, a tool schema, a refactored loop. Its outputs are stochastic and multi-turn, so one run proves nothing either way. Which differences are real, and which layer caused them?",
+      "answer": "pass^k sampling, McNemar's exact test as a merge gate, trajectory diffs to locate the change",
+      "instrument": "Fisherman"
+    },
+    {
+      "q": "Q.02",
+      "title": "When is a judge allowed to judge?",
+      "body": "LLM-as-judge is cheap and scales, but a lenient judge quietly lets regressions through. How much agreement with human labels is enough before a judge may block a merge, and which deterministic checks must sit underneath it?",
+      "answer": "calibrate against a golden set (κ, FPR, FNR), back the judge with rule assertions",
+      "instrument": "Fisherman"
+    },
+    {
+      "q": "Q.03",
+      "title": "What does an adapter actually learn?",
+      "body": "LoRA trains a low-rank update on a frozen model. Separating a genuine domain gain from memorised formatting needs base and adapter evaluated on the same held-out examples, with provenance for both.",
+      "answer": "base-versus-adapter evaluation on held-out data, verified artifacts only",
+      "instrument": "fine-tuning platform (private, in development)"
+    },
+    {
+      "q": "Q.04",
+      "title": "Can structure define a unit of work?",
+      "body": "Time and line counts are weak proxies for \"this feature is done\". Can syntax-tree changes, weighted by depth, spread and confidence, recognise a meaningful milestone without asking the developer?",
+      "answer": "weighted milestone scoring over AST diffs",
+      "instrument": "SemiGit"
     }
   ]
 }

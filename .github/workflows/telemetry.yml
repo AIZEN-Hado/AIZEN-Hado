@@ -13,6 +13,8 @@ on:
     paths:
       - "scripts/telemetry.py"
       - "scripts/kit.py"
+      - "scripts/canvas.py"
+      - "scripts/canvas.json"
       - "scripts/glyphs.json"
       - ".github/workflows/telemetry.yml"
 

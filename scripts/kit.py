@@ -46,13 +46,51 @@ def esc(s):
     return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;"))
 
 
+class Layout:
+    """The profile is one tall canvas cut into horizontal slices, one image each, stacked with no gaps.
+
+    Each Doc takes the current cursor as its top edge (page coordinates) and advances it when saved, so
+    images must be built in README order. The build runs twice: the "collect" pass records where text and
+    illustrations sit, how dense the background should be and where the glows are; the "draw" pass renders
+    the shared background with that knowledge, so nothing in it ever runs behind a word.
+    """
+
+    def __init__(self):
+        self.phase = "draw"
+        self.reset()
+        self.frozen = {"keep": [], "density": [], "glows": [], "slices": {}, "total": 0}
+
+    def reset(self):
+        self.cursor = 0
+        self.items = []                  # (name, height, alt, link) in page order
+        self.keep, self.density, self.glows, self.slices = [], [], [], {}
+
+    def freeze(self):
+        self.frozen = {"keep": list(self.keep), "density": list(self.density), "glows": list(self.glows),
+                       "slices": dict(self.slices), "total": self.cursor}
+
+    def load(self, path):
+        self.frozen = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+
+    def dump(self, path):
+        pathlib.Path(path).write_text(json.dumps(self.frozen, separators=(",", ":")) + "\n", encoding="utf-8")
+
+
+LAYOUT = Layout()
+
+
 class Doc:
-    """One SVG document. Collects glyph definitions so each glyph is stored once."""
+    """One SVG slice. Collects glyph definitions so each glyph is stored once."""
 
     def __init__(self, w, h, label, css=""):
         self.w, self.h, self.label, self.css = w, h, label, css
         self.body, self.defs, self._glyphs = [], [], {}
         self._uid = 0
+        self.y0 = LAYOUT.cursor
+
+    def keep(self, x0, y0, x1, y1):
+        """Reserve a local rectangle: the background constellation stays out of it."""
+        LAYOUT.keep.append([round(x0), round(self.y0 + y0), round(x1), round(self.y0 + y1)])
 
     # -- assembly ----------------------------------------------------------------------------------
     def add(self, *parts):
@@ -76,9 +114,14 @@ class Doc:
                 f'<defs>{glyph_defs}{"".join(self.defs)}</defs>'
                 f'{"".join(self.body)}</svg>\n')
 
-    def save(self, name):
+    def save(self, name, link=None):
         """Write assets/<name>; animated images also get a frozen twin in assets/static/<name>."""
+        LAYOUT.items.append((name, self.h, self.label, link))
+        LAYOUT.slices[name] = [self.y0, self.h]
+        LAYOUT.cursor += self.h
         path = ROOT / "assets" / name
+        if LAYOUT.phase == "collect":
+            return path
         path.write_text(self.render(), encoding="utf-8")
         if "animation" in self.css:
             (ROOT / "assets" / "static").mkdir(exist_ok=True)
@@ -124,6 +167,8 @@ class Doc:
             pen += adv * scale + track / k
             if i + 1 < len(s):
                 pen += kern.get(s[i:i + 2], 0)
+        size_box = (x - 7, y - size * .82 - 6, x + width + 7, y + size * .28 + 6)
+        self.keep(*size_box)
         op = f' fill-opacity="{opacity}"' if opacity != 1 else ""
         c = f' class="{cls}"' if cls else ""
         return (f'<g{c} fill="{fill}"{op} transform="translate({f(x)} {f(y)}) scale({k:.5f} {-k:.5f})"{extra}>'
@@ -159,6 +204,47 @@ def measure(s, size, face="sans-400", track=0):
     return total
 
 
+def paragraph(doc, segments, x, y, size, max_w, leading):
+    """Wrap styled runs. segments = [(text, face, fill, opacity), ...]. Returns (svg, number of lines)."""
+    words = []                                            # (word, style, joined_to_previous)
+    for text, face, fill, op in segments:
+        for i, word in enumerate(text.split(" ")):
+            if word:
+                words.append((word, (face, fill, op), i == 0 and not text.startswith(" ")))
+    lines, cur, cur_w = [], [], 0.0
+    for word, st, glued in words:
+        ww = measure(word, size, st[0])
+        gap = 0 if (glued and cur) else measure(" ", size, st[0])
+        if cur and cur_w + gap + ww > max_w:
+            lines.append(cur)
+            cur, cur_w, gap = [], 0.0, 0
+        cur.append((word, st, gap if cur else 0))
+        cur_w += (gap if len(cur) > 1 else 0) + ww
+    if cur:
+        lines.append(cur)
+    out = []
+    for n, line in enumerate(lines):
+        pen = x
+        run, run_st, run_x = "", None, x
+        for word, st, gap in line:
+            if st != run_st and run:
+                out.append(doc.text(run, run_x, y + n * leading, size, run_st[0], run_st[1], run_st[2]))
+                run, run_x = "", pen + (gap if gap else 0)
+                run_st = st
+                run = word
+                pen += gap + measure(word, size, st[0])
+                continue
+            if not run:
+                run_st, run_x = st, pen + gap
+                run = word
+            else:
+                run += " " * (1 if gap else 0) + word
+            pen += gap + measure(word, size, st[0])
+        if run:
+            out.append(doc.text(run, run_x, y + n * leading, size, run_st[0], run_st[1], run_st[2]))
+    return "".join(out), len(lines)
+
+
 def balanced(s, size, face, max_w, track=0):
     """Wrap, then even out a two-line result so the last line is never a lone word."""
     lines = wrap(s, size, face, max_w, track)
@@ -186,19 +272,45 @@ def wrap(s, size, face, max_w, track=0):
 
 
 # ---------------------------------------------------------------------------------------------- chrome
-def plate(doc, label_tl="", label_tr="", label_bl="", label_br="", r=18, base=VOID):
-    """Dark rounded plate with registration marks and tiny corner annotations."""
+def plate(doc, density=.5, last=False, glow=None, **_):
+    """Paint this slice of the shared canvas and return a clip id for its content.
+
+    density  how busy the background constellation is here (0 = none)
+    glow     optional (cx, cy, r, colour, opacity) in local coordinates; glows are global, so they
+             continue across the seams into neighbouring slices
+    The first slice rounds the canvas's top corners and the slice saved with last=True its bottom ones.
+    """
+    import canvas
     w, h = doc.w, doc.h
+    if LAYOUT.phase == "collect":
+        LAYOUT.density.append([doc.y0, doc.y0 + h, density])
+        if glow:
+            cx, cy, r, col, op = glow
+            LAYOUT.glows.append([cx, doc.y0 + cy, r, col, op])
+    r = 18
+    top, bottom = doc.y0 == 0, last
     clip = doc.uid("clip")
-    doc.define(f'<clipPath id="{clip}"><rect width="{w}" height="{h}" rx="{r}"/></clipPath>')
-    doc.add(f'<rect width="{w}" height="{h}" rx="{r}" fill="{base}"/>')
+    d = (f"M0 {r if top else 0}" + (f"A{r} {r} 0 0 1 {r} 0" if top else "") +
+         f"H{w - (r if top else 0)}" + (f"A{r} {r} 0 0 1 {w} {r}" if top else "") +
+         f"V{h - (r if bottom else 0)}" + (f"A{r} {r} 0 0 1 {w - r} {h}" if bottom else "") +
+         f"H{r if bottom else 0}" + (f"A{r} {r} 0 0 1 0 {h - r}" if bottom else "") + "Z")
+    doc.define(f'<clipPath id="{clip}"><path d="{d}"/></clipPath>')
+    doc.add(f'<g clip-path="url(#{clip})">{canvas.layer(doc)}</g>')
     return clip
 
 
+def panel(doc, x0=12, y0=8, x1=None, y1=None, r=16):
+    """A floating instrument panel: faint frame over a darkened patch of the canvas."""
+    x1 = doc.w - 12 if x1 is None else x1
+    y1 = doc.h - 8 if y1 is None else y1
+    doc.keep(x0 - 6, y0 - 6, x1 + 6, y1 + 6)
+    return (f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" rx="{r}" fill="#08090E" fill-opacity=".86" '
+            f'stroke="#FFFFFF" stroke-opacity=".075"/>')
+
+
 def plate_border(doc, r=18):
-    w, h = doc.w, doc.h
-    return (f'<rect x=".5" y=".5" width="{w - 1}" height="{h - 1}" rx="{r - .5}" stroke="#FFFFFF" '
-            f'stroke-opacity=".07"/>')
+    """Slices no longer have their own border; kept so older call sites still work."""
+    return ""
 
 
 def registration(doc, inset=22, arm=9, color=SILVER, opacity=.45):

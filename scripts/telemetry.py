@@ -4,6 +4,8 @@
   GITHUB_TOKEN=... GH_LOGIN=AIZEN-Hado python3 scripts/telemetry.py     # fetch, cache, render
   python3 scripts/telemetry.py --cached                                  # re-render from scripts/telemetry.json
 
+(scripts/build.py also renders this panel, from the cache, as part of the full canvas.)
+
 The fetched numbers are cached in scripts/telemetry.json so a design change can be re-rendered without
 an API call. Nothing here is estimated: every figure is either from the GraphQL API or derived from it.
 Standard library only.
@@ -18,6 +20,7 @@ import kit
 from kit import AMBER, EMBER, SILVER, VIOLET, WHITE, f
 
 CACHE = kit.ROOT / "scripts" / "telemetry.json"
+CANVAS = kit.ROOT / "scripts" / "canvas.json"     # page position + keep-out zones, written by build.py
 
 QUERY = """
 query($login: String!) {
@@ -109,8 +112,8 @@ def render(data):
     alt = (f'Development telemetry: {data["total"]:,} public contributions in the last 12 months, {active} active days, '
            f'longest streak {streak} days, {data["repos"]} public repositories. Last sync {data["synced"][:10]}.')
     doc = kit.Doc(W, H, alt, CSS)
-    clip = kit.plate(doc)
-    g = [kit.stars(31, W, H, 50, twinkle=.04, keep=[(30, 40, 970, 530)])]
+    clip = kit.plate(doc, density=.3)
+    g = [kit.panel(doc)]
 
     # readouts
     readouts = [(f'{data["total"]:,}', "CONTRIBUTIONS · 12 MO"), (str(active), "ACTIVE DAYS"),
@@ -220,6 +223,13 @@ def main():
             raise SystemExit("Set GITHUB_TOKEN and GH_LOGIN, or pass --cached.")
         data = fetch(login, token)
         CACHE.write_text(json.dumps(data, separators=(",", ":")) + "\n", encoding="utf-8")
+    # The panel is one slice of the shared canvas: draw it at its page position so the background lines
+    # up with the slices above and below it.
+    lay = kit.LAYOUT
+    lay.load(CANVAS)
+    lay.phase = "draw"
+    lay.reset()
+    lay.cursor = lay.frozen["slices"]["telemetry.svg"][0]
     print(render(data).save("telemetry.svg"))
 
 
