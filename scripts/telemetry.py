@@ -15,11 +15,18 @@ import urllib.request
 QUERY = """
 query($login: String!) {
   user(login: $login) {
+    followers { totalCount }
     repositories(first: 100, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC) {
       totalCount
-      nodes { languages(first: 8, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name } } } }
+      nodes {
+        stargazerCount
+        languages(first: 8, orderBy: {field: SIZE, direction: DESC}) { edges { size node { name } } }
+      }
     }
     contributionsCollection {
+      totalCommitContributions
+      totalPullRequestContributions
+      totalIssueContributions
       contributionCalendar {
         totalContributions
         weeks { contributionDays { date contributionCount contributionLevel } }
@@ -48,7 +55,11 @@ def fetch(login, token):
     for repo in user["repositories"]["nodes"]:
         for e in repo["languages"]["edges"]:
             langs[e["node"]["name"]] = langs.get(e["node"]["name"], 0) + e["size"]
+    cc = user["contributionsCollection"]
     return {"total": cal["totalContributions"], "repos": user["repositories"]["totalCount"],
+            "commits": cc["totalCommitContributions"], "prs": cc["totalPullRequestContributions"],
+            "issues": cc["totalIssueContributions"], "followers": user["followers"]["totalCount"],
+            "stars": sum(r["stargazerCount"] for r in user["repositories"]["nodes"]),
             "days": [(d["date"], d["contributionCount"], d["contributionLevel"]) for d in days], "langs": langs}
 
 
@@ -61,7 +72,8 @@ def mock():
     for i in range((today - start).days + 1):
         lvl = rng.choices(range(5), weights=[5, 4, 3, 2, 1])[0]
         days.append(((start + datetime.timedelta(days=i)).isoformat(), lvl * 2, names[lvl]))
-    return {"total": sum(d[1] for d in days), "repos": 15, "days": days,
+    return {"total": sum(d[1] for d in days), "repos": 15, "commits": 812, "prs": 46, "issues": 19, "followers": 23,
+            "stars": 31, "days": days,
             "langs": {"Python": 520, "TypeScript": 260, "JavaScript": 180, "Java": 90, "Jupyter Notebook": 60, "CSS": 30}}
 
 
@@ -69,7 +81,8 @@ def standby():
     today = datetime.date.today()
     start = today - datetime.timedelta(days=364 + (today.isoweekday() % 7))
     days = [((start + datetime.timedelta(days=i)).isoformat(), 0, "NONE") for i in range((today - start).days + 1)]
-    return {"total": None, "repos": None, "days": days, "langs": {}}
+    return {"total": None, "repos": None, "commits": None, "prs": None, "issues": None, "followers": None,
+            "stars": None, "days": days, "langs": {}}
 
 
 def main():

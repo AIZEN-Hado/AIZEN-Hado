@@ -33,7 +33,7 @@ def phase_delays(theta, half):
 # =============================================================================== layout
 def layout(part):
     sections = {"top": [("hero", 480), ("about", 560), ("focus", 520), ("journey", 470)],
-                "bottom": [("stack", 760), ("telemetry", 610), ("contact", 440)]}[part]
+                "bottom": [("stack", 700), ("telemetry", 900), ("contact", 440)]}[part]
     out, y = {}, 0
     for name, h in sections:
         out[name] = (y, h)
@@ -295,92 +295,200 @@ def journey(cfg, y0):
     return "".join(s)
 
 
-# =============================================================================== stack
-CSS_STACK = (".tg{animation:tg 6s ease-in-out infinite}@keyframes tg{0%,100%{opacity:.25}12%{opacity:1}30%{opacity:.25}}"
-             ".tb{animation:tb 6s ease-in-out infinite}@keyframes tb{0%,100%{opacity:.55}12%{opacity:1}30%{opacity:.55}}")
+# =============================================================================== stack: a turning sphere of names
+GROUP_GLYPHS = ["diamond", "hexagon", "triangle", "square", "ring", "cross", "spark"]
+
+
+def glyph(kind, x, y, r, color, width=1.4):
+    """Small category symbol centred on (x, y)."""
+    st = f'fill="none" stroke="{color}" stroke-width="{width}" stroke-linejoin="round"'
+    if kind == "diamond":
+        return f'<path d="M{f(x)},{f(y - r)}L{f(x + r)},{f(y)}L{f(x)},{f(y + r)}L{f(x - r)},{f(y)}Z" {st}/>'
+    if kind == "hexagon":
+        pts = " ".join(f"{f(x + r * math.cos(math.radians(60 * k + 30)))},{f(y + r * math.sin(math.radians(60 * k + 30)))}" for k in range(6))
+        return f'<polygon points="{pts}" {st}/>'
+    if kind == "triangle":
+        return f'<path d="M{f(x)},{f(y - r)}L{f(x + r * .95)},{f(y + r * .7)}L{f(x - r * .95)},{f(y + r * .7)}Z" {st}/>'
+    if kind == "square":
+        return f'<rect x="{f(x - r * .8)}" y="{f(y - r * .8)}" width="{f(r * 1.6)}" height="{f(r * 1.6)}" {st}/>'
+    if kind == "ring":
+        return f'<circle cx="{f(x)}" cy="{f(y)}" r="{f(r * .85)}" {st}/><circle cx="{f(x)}" cy="{f(y)}" r="{f(r * .25)}" fill="{color}"/>'
+    if kind == "cross":
+        return f'<path d="M{f(x - r)},{f(y)}H{f(x + r)}M{f(x)},{f(y - r)}V{f(y + r)}" {st}/>'
+    return (f'<path d="M{f(x)},{f(y - r)}Q{f(x + r * .2)},{f(y - r * .2)} {f(x + r)},{f(y)}Q{f(x + r * .2)},{f(y + r * .2)} {f(x)},{f(y + r)}'
+            f'Q{f(x - r * .2)},{f(y + r * .2)} {f(x - r)},{f(y)}Q{f(x - r * .2)},{f(y - r * .2)} {f(x)},{f(y - r)}Z" fill="{color}"/>')
+
+
+CSS_STACK = (".sd{transform-box:fill-box;transform-origin:center;animation:sd " + EASE + " infinite alternate}"
+             "@keyframes sd{from{opacity:.12;transform:scale(.62)}to{opacity:1;transform:scale(1.12)}}"
+             ".spin{transform-box:fill-box;transform-origin:center;animation:spin linear infinite}@keyframes spin{to{transform:rotate(360deg)}}")
 
 
 def stack(cfg, y0):
-    """The stack as a periodic table: one element per tool, a column per group, coloured by group.
-    A pulse of light sweeps across the table and every element has an electron in orbit."""
+    """Every tool in the stack orbits on a turning sphere, coloured and marked by group; a readable
+    index of the same list sits beside it."""
     groups = cfg["stack"]
-    tw, th, gx, gy = 108, 104, 12, 12
-    rows = max(len(g["items"]) for g in groups)
-    x0 = (W - (len(groups) * tw + (len(groups) - 1) * gx)) / 2
-    top = 196
     s = [f'<g transform="translate(0 {y0})">', heading(4, "STACK", 132)]
-    defs = []
-    n = 0
-    for c, g in enumerate(groups):
+    # index
+    y = 200
+    for k, g in enumerate(groups):
         color = getattr(sf, g["color"])
-        defs.append(f'<linearGradient id="c-tile-{c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{color}" stop-opacity=".16"/>'
-                    f'<stop offset="1" stop-color="{color}" stop-opacity=".02"/></linearGradient>')
-        for r, (sym, name) in enumerate(g["items"]):
-            n += 1
-            row = rows - len(g["items"]) + r                       # columns hang from the bottom
-            x, y = x0 + c * (tw + gx), top + row * (th + gy)
-            delay = (c + row * .6) * .32
-            cx, cy = x + tw / 2, y + 50
-            s.append(f'<rect x="{f(x)}" y="{f(y)}" width="{tw}" height="{th}" rx="10" fill="url(#c-tile-{c})"/>')
-            s.append(f'<rect class="tb" style="animation-delay:{delay:.2f}s" x="{f(x + .6)}" y="{f(y + .6)}" width="{tw - 1.2}" '
-                     f'height="{th - 1.2}" rx="9.5" fill="none" stroke="{color}" stroke-opacity=".7" stroke-width="1.2"/>')
-            s.append(f'<rect class="tg" style="animation-delay:{delay:.2f}s" x="{f(x - 3)}" y="{f(y - 3)}" width="{tw + 6}" '
-                     f'height="{th + 6}" rx="13" fill="none" stroke="{color}" stroke-opacity=".22" stroke-width="5"/>')
-            s.append(sf.label(f"{n:02d}", x + 10, y + 19, color, .9, size=10, spacing=1))
-            # electron orbit behind the symbol
-            orbit = f"M{f(cx - 36)},{f(cy - 10)}a36,10 0 1 0 72,0a36,10 0 1 0 -72,0"
-            s.append(f'<path d="{orbit}" transform="rotate(-18 {f(cx)} {f(cy - 10)})" fill="none" stroke="{color}" stroke-opacity=".18" stroke-dasharray="2 4"/>')
-            s.append(sf.text(sym, cx, cy, 36, "inter-800", anchor="middle", attrs=f'fill="{color}"')[0])
-            s.append(f'<g transform="rotate(-18 {f(cx)} {f(cy - 10)})"><circle r="2.4" fill="#fff"/>'
-                     f'<animateMotion dur="{2.6 + (n % 5) * .45:.2f}s" begin="-{(n * .37) % 3:.2f}s" repeatCount="indefinite" path="{orbit}"/></g>')
-            s.append(sf.text(name, cx, y + 84, 12.5, "inter-400", anchor="middle", attrs=f'fill="{sf.BODY}"')[0])
-    # legend
-    ly = top + rows * (th + gy) + 40
-    widths = [18 + sf.text_width(g["group"], 10, "mono-500", 1.5) for g in groups]
-    gap = (880 - sum(widths)) / (len(groups) - 1)
-    x = 60.0
-    for g, w in zip(groups, widths):
-        color = getattr(sf, g["color"])
-        s.append(f'<rect x="{f(x)}" y="{ly - 9}" width="10" height="10" rx="2" fill="{color}"/>')
-        s.append(sf.label(g["group"], x + 18, ly, sf.BODY, 1, size=10, spacing=1.5))
-        x += w + gap
-    s.insert(1, f"<defs>{''.join(defs)}</defs>")
+        s.append(glyph(GROUP_GLYPHS[k], 68, y - 4, 6, color))
+        s.append(sf.label(g["group"], 86, y, color, 1, size=11, spacing=2))
+        s.append(sf.label(f'{len(g["items"]):02d}', 330, y, sf.DIM, 1, size=11, spacing=1, anchor="end"))
+        s.append(sf.text("  ·  ".join(n for _, n in g["items"]), 86, y + 22, 13.5, "inter-400", attrs=f'fill="{sf.BODY}"')[0])
+        y += 64
+    # sphere
+    cx, cy, R, period = 650, 400, 220, 34
+    half = period / 2
+    s.append(glow("stack", cx, cy, R * 1.25, sf.VIOLET, .12))
+    s.append(f'<g fill="none" stroke="#fff">'
+             f'<circle cx="{cx}" cy="{cy}" r="{R + 30}" stroke-opacity=".07"/>'
+             f'<circle class="spin" style="animation-duration:90s" cx="{cx}" cy="{cy}" r="{R + 42}" stroke-opacity=".22" stroke-dasharray="1 9"/>'
+             f'<circle class="spin" style="animation-duration:140s;animation-direction:reverse" cx="{cx}" cy="{cy}" r="{R + 52}" stroke-opacity=".12" stroke-dasharray="30 60 4 60"/>')
+    for k in range(-2, 3):                                        # latitude lines
+        yy = cy + R * .78 * k / 3
+        rx = R * math.sqrt(1 - (k / 3) ** 2)
+        s.append(f'<ellipse cx="{cx}" cy="{f(yy)}" rx="{f(rx)}" ry="{f(rx * .16)}" stroke-opacity=".08" stroke-dasharray="2 6"/>')
+    ticks = "".join(f"M{f(cx + (R + 30) * math.cos(math.radians(a)))},{f(cy + (R + 30) * math.sin(math.radians(a)))}"
+                    f"L{f(cx + (R + 38) * math.cos(math.radians(a)))},{f(cy + (R + 38) * math.sin(math.radians(a)))}" for a in range(0, 360, 15))
+    s.append(f'<path d="{ticks}" stroke-opacity=".25"/></g>')
+    items = [(n, getattr(sf, g["color"]), GROUP_GLYPHS[k]) for k, g in enumerate(groups) for _, n in g["items"]]
+    golden = math.pi * (3 - math.sqrt(5))
+    n = len(items)
+    for i, (name, color, kind) in enumerate(items):
+        yn = 1 - 2 * (i + .5) / n
+        amp = R * math.sqrt(1 - yn * yn)
+        d1, d2 = phase_delays((i * golden * 1.0) % (2 * math.pi), half)
+        label, w = sf.text(name, 0, 0, 17, "inter-600", attrs=f'fill="{color}"')
+        x0 = cx - (w + 16) / 2
+        yy = cy + R * .82 * yn
+        s.append(f'<g class="gx" style="--a:{f(amp)}px;animation-duration:{half}s;animation-delay:-{d1:.2f}s">'
+                 f'<g class="sd" style="animation-duration:{half}s;animation-delay:-{d2:.2f}s">'
+                 + glyph(kind, x0 + 5, yy - 6, 5, color, 1.3)
+                 + f'<g transform="translate({f(x0 + 16)} {f(yy)})">{label}</g></g></g>')
     s.append("</g>")
     return "".join(s)
 
 
+# =============================================================================== telemetry: a HUD
+CSS_TELE = (".wk{animation:wk 9s ease-in-out infinite}@keyframes wk{0%,14%,100%{opacity:.55}7%{opacity:1}}"
+            ".now{animation:now 2s ease-in-out infinite}@keyframes now{50%{opacity:.3}}"
+            ".lit{animation:lit 1.6s steps(1) infinite}@keyframes lit{50%{opacity:.2}}"
+            ".draw{stroke-dasharray:1;animation:draw 9s ease-in-out infinite}"
+            "@keyframes draw{0%{stroke-dashoffset:1}45%,90%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}")
 
-CSS_TERRAIN = (".wk{animation:wk 9s ease-in-out infinite}@keyframes wk{0%,14%,100%{opacity:.55}7%{opacity:1}}"
-               ".now{animation:now 2s ease-in-out infinite}@keyframes now{50%{opacity:.3}}")
+
+def brackets(x, y, w, h, color, k=10, op=.8):
+    d = (f"M{x},{y + k}V{y}H{x + k}M{x + w - k},{y}H{x + w}V{y + k}M{x + w},{y + h - k}V{y + h}H{x + w - k}"
+         f"M{x + k},{y + h}H{x}V{y + h - k}")
+    return f'<path d="{d}" fill="none" stroke="{color}" stroke-opacity="{op}" stroke-width="1.4"/>'
+
+
+def streaks(days):
+    counts = [c for _, c, _ in days]
+    longest = run = 0
+    for c in counts:
+        run = run + 1 if c else 0
+        longest = max(longest, run)
+    cur = 0
+    seq = counts[:-1] if counts and counts[-1] == 0 else counts
+    for c in reversed(seq):
+        if not c:
+            break
+        cur += 1
+    return cur, longest
+
+
+def smooth(points, floor=None):
+    """Catmull-Rom through the points, as cubic Bezier segments (control points kept above `floor`)."""
+    d = f"M{f(points[0][0])},{f(points[0][1])}"
+    for i in range(len(points) - 1):
+        p0 = points[max(i - 1, 0)]
+        p1, p2 = points[i], points[i + 1]
+        p3 = points[min(i + 2, len(points) - 1)]
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+        if floor is not None:
+            c1 = (c1[0], min(c1[1], floor))
+            c2 = (c2[0], min(c2[1], floor))
+            if p1[1] >= floor - .5 or p2[1] >= floor - .5:      # flat runs stay on the floor
+                c1 = (c1[0], max(c1[1], min(p1[1], p2[1])))
+                c2 = (c2[0], max(c2[1], min(p1[1], p2[1])))
+        d += f"C{f(c1[0])},{f(c1[1])} {f(c2[0])},{f(c2[1])} {f(p2[0])},{f(p2[1])}"
+    return d
 
 
 def telemetry(data, y0):
     live = data["total"] is not None
-    s = [f'<g transform="translate(0 {y0})">', heading(5, "TELEMETRY", 132)]
-    active = sum(1 for _, c, _ in data["days"] if c)
-    stats = [(data["total"], "CONTRIBUTIONS / 12 MONTHS"), (active if live else None, "ACTIVE DAYS"),
-             (data["repos"], "PUBLIC REPOSITORIES")]
-    for i, (value, caption) in enumerate(stats):
-        x = 60 + i * 310
-        s.append(sf.text(f"{value:,}" if value is not None else "--", x, 236, 58, "inter-800", attrs=f'fill="{sf.INK}"')[0])
-        s.append(sf.label(caption, x + 2, 266, sf.DIM, 1, size=12))
-
-    # contribution terrain: one bar per day on a floor seen in perspective
     days = data["days"]
+    cur, longest = streaks(days) if live else (None, None)
+    s = [f'<g transform="translate(0 {y0})">', heading(5, "TELEMETRY", 132)]
+    s.append(sf.label("LIVE · UPDATED DAILY" if live else "AWAITING FIRST SYNC", 940, 104, sf.DIM, 1, size=10, spacing=2, anchor="end"))
+    s.append(f'<circle class="lit" cx="{f(940 - sf.text_width("LIVE · UPDATED DAILY" if live else "AWAITING FIRST SYNC", 10, "mono-500", 2) - 12)}" cy="100" r="3" fill="{sf.AQUA}"/>')
+
+    # ---- readouts
+    cells = [("CONTRIBUTIONS", data["total"], "LAST 12 MONTHS", sf.AQUA), ("COMMITS", data.get("commits"), "THIS YEAR", sf.SKY),
+             ("PULL REQUESTS", data.get("prs"), "THIS YEAR", sf.VIOLET), ("STARS", data.get("stars"), "ON PUBLIC REPOS", sf.PINK),
+             ("CURRENT STREAK", cur, "DAYS", sf.YELLOW), ("LONGEST STREAK", longest, "DAYS", sf.ORANGE)]
+    cw, gap, top = 140, 8, 176
+    for i, (label, value, sub, color) in enumerate(cells):
+        x = 60 + i * (cw + gap)
+        s.append(f'<rect x="{x}" y="{top}" width="{cw}" height="104" fill="{color}" fill-opacity=".04"/>')
+        s.append(brackets(x, top, cw, 104, color))
+        s.append(sf.label(label, x + 14, top + 24, color, .95, size=9.5, spacing=1.5))
+        s.append(sf.text(f"{value:,}" if value is not None else "--", x + 14, top + 70, 36, "inter-800", attrs=f'fill="{sf.INK}"')[0])
+        s.append(sf.label(sub, x + 14, top + 91, sf.DIM, 1, size=9, spacing=1.5))
+        s.append(f'<rect class="lit" style="animation-delay:-{i * .27:.2f}s" x="{x + cw - 16}" y="{top + 16}" width="4" height="4" fill="{color}"/>')
+
+    # ---- activity: last 60 days
+    gx0, gx1, gy0, gy1 = 60, 940, 330, 520
+    s.append(sf.label("ACTIVITY · LAST 60 DAYS", gx0, gy0 - 8, sf.BODY, 1, size=10, spacing=2))
+    recent = days[-60:]
+    vals = [c for _, c, _ in recent]
+    peak = max(vals + [1])
+    top_y = gy0 + 26
+    pts = [(gx0 + (gx1 - gx0) * i / (len(vals) - 1), gy1 - (gy1 - top_y) * v / peak) for i, v in enumerate(vals)]
+    grid = "".join(f"M{gx0},{f(gy1 - (gy1 - top_y) * k / 4)}H{gx1}" for k in range(5))
+    s.append(f'<path d="{grid}" stroke="#fff" stroke-opacity=".07" stroke-dasharray="2 5" fill="none"/>')
+    for i, (date, _, _) in enumerate(recent):
+        dt = datetime.date.fromisoformat(date)
+        if dt.day == 1 or i in (0, len(recent) - 1):
+            x = pts[i][0]
+            s.append(f'<rect x="{f(x - .5)}" y="{gy1}" width="1" height="6" fill="#fff" fill-opacity=".3"/>')
+            s.append(sf.label(dt.strftime("%b %d").upper(), x, gy1 + 22, sf.DIM, 1, size=9.5, spacing=1,
+                              anchor="start" if i == 0 else "end" if i == len(recent) - 1 else "middle"))
+    line = smooth(pts, gy1)
+    s.append('<defs><linearGradient id="c-area" x1="0" y1="0" x2="0" y2="1">'
+             f'<stop offset="0" stop-color="{sf.AQUA}" stop-opacity=".28"/><stop offset="1" stop-color="{sf.AQUA}" stop-opacity="0"/></linearGradient>'
+             f'<linearGradient id="c-line" gradientUnits="userSpaceOnUse" x1="{gx0}" y1="0" x2="{gx1}" y2="0">'
+             f'<stop offset="0" stop-color="{sf.VIOLET}"/><stop offset=".5" stop-color="{sf.AQUA}"/><stop offset="1" stop-color="{sf.PINK}"/></linearGradient></defs>')
+    s.append(f'<path d="{line}L{gx1},{gy1}L{gx0},{gy1}Z" fill="url(#c-area)"/>')
+    s.append(f'<path d="{line}" fill="none" stroke="url(#c-line)" stroke-opacity=".35" stroke-width="2"/>')
+    s.append(f'<path class="draw" pathLength="1" d="{line}" fill="none" stroke="url(#c-line)" stroke-width="2.4" stroke-linecap="round"/>')
+    if live:
+        pi = max(range(len(vals)), key=lambda i: vals[i])
+        px, py = pts[pi]
+        s.append(f'<circle cx="{f(px)}" cy="{f(py)}" r="9" fill="{sf.PINK}" opacity=".18"/><circle cx="{f(px)}" cy="{f(py)}" r="3.4" fill="{sf.PINK}"/>')
+        s.append(sf.label(f"PEAK {peak}", px, py - 14, sf.PINK, 1, size=10, spacing=1.5, anchor="middle"))
+    s.append(f'<g><circle r="10" fill="#fff" opacity=".12"/><circle r="3" fill="#fff"/>'
+             f'<animateMotion dur="9s" repeatCount="indefinite" path="{line}"/></g>')
+
+    # ---- contribution terrain (left) + languages ring (right)
+    s.append(sf.label("CONTRIBUTION FIELD · 12 MONTHS", 60, 586, sf.BODY, 1, size=10, spacing=2))
     first = datetime.date.fromisoformat(days[0][0])
     offset = first.isoweekday() % 7
     weeks = (offset + len(days) + 6) // 7
     maxc = max([c for _, c, _ in days] + [1])
-    horizon, front_y, z0, dz = 318, 532, 6.0, 1.7          # camera: front row at depth z0
+    tcx, half_w, horizon, front_y, z0, dz = 332, 270, 640, 846, 6.0, 1.7
 
     def cam(wk, d, height=0.0):
-        """Project floor cell (week, day) lifted by `height` (front-row pixels) to the screen."""
         z = z0 + d * dz
-        x = 500 + (wk - (weeks - 1) / 2) * (430 / ((weeks - 1) / 2)) * z0 / z
+        x = tcx + (wk - (weeks - 1) / 2) * (half_w / ((weeks - 1) / 2)) * z0 / z
         y = horizon + (front_y - horizon) * z0 / z - height * z0 / z
         return x, y, z0 / z
 
-    s.append(glow("terrain", 500, 470, 440, sf.AQUA, .08))
+    s.append(glow("terrain", tcx, 790, 320, sf.AQUA, .08))
     grid = []
     for d in range(7):
         xa, ya, _ = cam(-.6, d)
@@ -397,43 +505,51 @@ def telemetry(data, y0):
         cols[wk].append((d, count, i == len(days) - 1))
     for wk, entries in enumerate(cols):
         parts = []
-        for d, count, today in sorted(entries, key=lambda e: -e[0]):     # back rows first
+        for d, count, today in sorted(entries, key=lambda e: -e[0]):
             v = math.sqrt(count / maxc)
             x, y, p = cam(wk, d)
             if today and live:
-                _, ty, _ = cam(wk, d, 8 + 74 * v)
-                parts.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(ty)}" stroke="{AMBER}" stroke-width="{2.6 * p:.1f}"/>'
-                             f'<circle class="now" cx="{f(x)}" cy="{f(ty)}" r="{4 * p:.1f}" fill="{AMBER}"/>')
+                _, ty, _ = cam(wk, d, 8 + 70 * v)
+                parts.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(ty)}" stroke="{sf.YELLOW}" stroke-width="{2.2 * p:.1f}"/>'
+                             f'<circle class="now" cx="{f(x)}" cy="{f(ty)}" r="{3.6 * p:.1f}" fill="{sf.YELLOW}"/>')
                 continue
             if count == 0:
-                parts.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="{1.1 * p + .2:.1f}" fill="{sf.AQUA}" opacity="{.12 + .2 * p:.2f}"/>')
+                parts.append(f'<circle cx="{f(x)}" cy="{f(y)}" r="{.9 * p + .2:.1f}" fill="{sf.AQUA}" opacity="{.12 + .2 * p:.2f}"/>')
                 continue
-            _, ty, _ = cam(wk, d, 8 + 74 * v)
+            _, ty, _ = cam(wk, d, 8 + 70 * v)
             parts.append(f'<line x1="{f(x)}" y1="{f(y)}" x2="{f(x)}" y2="{f(ty)}" stroke="{sf.AQUA}" '
-                         f'stroke-width="{2.6 * p:.1f}" stroke-opacity="{(.2 + .55 * v) * (.45 + .55 * p):.2f}"/>'
-                         f'<circle cx="{f(x)}" cy="{f(ty)}" r="{(1.3 + 1.6 * v) * p:.1f}" fill="#eef3ff" opacity="{(.45 + .55 * v) * (.5 + .5 * p):.2f}"/>')
+                         f'stroke-width="{2 * p:.1f}" stroke-opacity="{(.2 + .55 * v) * (.45 + .55 * p):.2f}"/>'
+                         f'<circle cx="{f(x)}" cy="{f(ty)}" r="{(1.1 + 1.4 * v) * p:.1f}" fill="#eafffb" opacity="{(.45 + .55 * v) * (.5 + .5 * p):.2f}"/>')
         s.append(f'<g class="wk" style="animation-delay:{wk * .09:.2f}s">{"".join(parts)}</g>')
 
-    if not live:
-        s.append(sf.label("AWAITING FIRST SYNC", 500, 572, sf.DIM, 1, size=12, spacing=4, anchor="middle"))
-    elif data["langs"]:
+    s.append(sf.label("LANGUAGES", 640, 586, sf.BODY, 1, size=10, spacing=2))
+    rcx, rcy, rr = 712, 720, 62
+    s.append(f'<circle class="spin" style="animation-duration:60s" cx="{rcx}" cy="{rcy}" r="{rr + 16}" fill="none" stroke="#fff" stroke-opacity=".18" stroke-dasharray="1 7"/>')
+    s.append(f'<circle cx="{rcx}" cy="{rcy}" r="{rr}" fill="none" stroke="#fff" stroke-opacity=".06" stroke-width="12"/>')
+    shades = [sf.YELLOW, sf.SKY, sf.PINK, sf.AQUA, sf.VIOLET, "#5d636d"]
+    if data["langs"]:
         total = sum(data["langs"].values())
-        top = sorted(data["langs"].items(), key=lambda kv: -kv[1])[:5]
-        rest = total - sum(v for _, v in top)
+        top_l = sorted(data["langs"].items(), key=lambda kv: -kv[1])[:5]
+        rest = total - sum(v for _, v in top_l)
         if rest > 0:
-            top.append(("Other", rest))
-        shades = [sf.YELLOW, sf.SKY, sf.PINK, sf.AQUA, sf.VIOLET, "#5d636d"]
-        x = 60.0
-        for (lang, size), shade in zip(top, shades):
-            w = 880 * size / total
-            s.append(f'<rect x="{f(x)}" y="555" width="{f(max(w - 3, 1))}" height="4" rx="2" fill="{shade}"/>')
-            x += w
-        slot = 880 / len(top)
-        for i, ((lang, size), shade) in enumerate(zip(top, shades)):
-            lx = 60 + i * slot
-            short = {"Jupyter Notebook": "Jupyter"}.get(lang, lang).upper()[:12]
-            s.append(f'<circle cx="{f(lx + 4)}" cy="579" r="4" fill="{shade}"/>')
-            s.append(sf.label(f"{short} {round(100 * size / total)}%", lx + 16, 584, sf.BODY, 1, size=11, spacing=1))
+            top_l.append(("Other", rest))
+        circ = 2 * math.pi * rr
+        acc = 0.0
+        for (lang, size), color in zip(top_l, shades):
+            frac = size / total
+            s.append(f'<circle cx="{rcx}" cy="{rcy}" r="{rr}" fill="none" stroke="{color}" stroke-width="12" '
+                     f'stroke-dasharray="{f(max(frac * circ - 3, .5))} {f(circ)}" stroke-dashoffset="{f(-acc * circ)}" '
+                     f'transform="rotate(-90 {rcx} {rcy})"/>')
+            acc += frac
+        lead = top_l[0]
+        s.append(sf.text(f"{round(100 * lead[1] / total)}%", rcx, rcy + 6, 22, "inter-800", anchor="middle", attrs=f'fill="{sf.INK}"')[0])
+        s.append(sf.label({"Jupyter Notebook": "JUPYTER"}.get(lead[0], lead[0]).upper()[:10], rcx, rcy + 24, shades[0], 1, size=9, spacing=1.5, anchor="middle"))
+        for i, ((lang, size), color) in enumerate(zip(top_l, shades)):
+            ly = 672 + i * 22
+            short = {"Jupyter Notebook": "Jupyter"}.get(lang, lang)
+            s.append(f'<rect x="808" y="{ly - 8}" width="8" height="8" rx="1.5" fill="{color}"/>')
+            s.append(sf.text(short, 824, ly, 13, "inter-400", attrs=f'fill="{sf.INK}"')[0])
+            s.append(sf.label(f"{round(100 * size / total)}%", 940, ly, sf.DIM, 1, size=10, spacing=1, anchor="end"))
     s.append("</g>")
     return "".join(s)
 
@@ -473,8 +589,8 @@ def build(cfg, hero_svg, data):
 
     lay, total = layout("bottom")
     label = ("Stack: " + "; ".join(f'{g["group"].title()}: {", ".join(n for _, n in g["items"])}' for g in cfg["stack"])
-             + ". Telemetry: contributions over the last 12 months as a 3D terrain. Contact.")
-    bottom = _svg(total, label, CSS_BG + CSS_TURN + CSS_STACK + CSS_TERRAIN,
+             + ". Telemetry: contributions, commits, pull requests, stars, streaks, a 60 day activity graph, a 3D contribution field and languages. Contact.")
+    bottom = _svg(total, label, CSS_BG + CSS_TURN + CSS_STACK + CSS_TELE,
                   background(0, total) + stack(cfg, lay["stack"][0]) + telemetry(data, lay["telemetry"][0])
                   + contact(cfg, lay["contact"][0], lay["contact"][1]), False)
     return top, bottom
