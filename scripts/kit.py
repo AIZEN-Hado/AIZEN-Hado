@@ -1,0 +1,277 @@
+"""Shared toolkit for every profile SVG: palette, outlined typography, plate chrome, starfields.
+
+Standard library only, so the daily telemetry workflow needs no installs.
+
+Text is drawn from glyph outlines (scripts/glyphs.json, built by fonts.py) because SVGs displayed through
+GitHub's image proxy cannot load fonts. Each glyph is defined once per file and placed with <use>.
+"""
+import json
+import math
+import pathlib
+import random
+
+# ---------------------------------------------------------------------------------------------- palette
+VOID = "#050508"
+DEEP = "#0B0D16"
+AMBER = "#FF6B35"
+VIOLET = "#8B5CF6"
+WHITE = "#F5F5F7"
+SILVER = "#8892A6"
+EMBER = "#FFD2B8"          # the white-hot end of amber, used only at the brightest points
+
+THEMES = {                 # for transparent section bands that sit directly on GitHub's page colour
+    "dark": {"ink": WHITE, "muted": SILVER, "accent": AMBER, "rule": "#2A2F3E", "faint": "#1A1E2A"},
+    "light": {"ink": DEEP, "muted": "#5A6377", "accent": "#D9480F", "rule": "#D3D7E0", "faint": "#E8EBF1"},
+}
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+_FONTS = json.loads((ROOT / "scripts" / "glyphs.json").read_text(encoding="utf-8"))
+FALLBACK = "sans-400"
+
+# Shared motion rules. Base styles are always the finished composition; animation only modulates it,
+# so prefers-reduced-motion (or a renderer without CSS animation) still shows a complete image.
+# Browsers do not reliably apply this inside an SVG shown as <img>, so the README also swaps in the frozen
+# twin from assets/static/ with <picture><source media="(prefers-reduced-motion: reduce)">.
+MOTION_OFF = "@media (prefers-reduced-motion:reduce){*{animation:none!important}}"
+STATIC = "*{animation:none!important}"
+
+
+def f(x):
+    """Compact number formatting for coordinates."""
+    s = f"{x:.2f}".rstrip("0").rstrip(".")
+    return "0" if s in ("-0", "") else s
+
+
+def esc(s):
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;"))
+
+
+class Doc:
+    """One SVG document. Collects glyph definitions so each glyph is stored once."""
+
+    def __init__(self, w, h, label, css=""):
+        self.w, self.h, self.label, self.css = w, h, label, css
+        self.body, self.defs, self._glyphs = [], [], {}
+        self._uid = 0
+
+    # -- assembly ----------------------------------------------------------------------------------
+    def add(self, *parts):
+        self.body.extend(p for p in parts if p)
+        return self
+
+    def define(self, *parts):
+        self.defs.extend(parts)
+
+    def uid(self, prefix="u"):
+        self._uid += 1
+        return f"{prefix}{self._uid}"
+
+    def render(self, static=False):
+        glyph_defs = "".join(f'<path id="{gid}" d="{d}"/>' for gid, d in self._glyphs.values())
+        css = (self.css + (STATIC if static else MOTION_OFF)).strip()
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.w} {self.h}" width="{self.w}" '
+                f'height="{self.h}" role="img" aria-label="{esc(self.label)}" fill="none">'
+                f'<title>{esc(self.label)}</title>'
+                f'<style>{css}</style>'
+                f'<defs>{glyph_defs}{"".join(self.defs)}</defs>'
+                f'{"".join(self.body)}</svg>\n')
+
+    def save(self, name):
+        """Write assets/<name>; animated images also get a frozen twin in assets/static/<name>."""
+        path = ROOT / "assets" / name
+        path.write_text(self.render(), encoding="utf-8")
+        if "animation" in self.css:
+            (ROOT / "assets" / "static").mkdir(exist_ok=True)
+            (ROOT / "assets" / "static" / name).write_text(self.render(static=True), encoding="utf-8")
+        return path
+
+    # -- typography --------------------------------------------------------------------------------
+    def _glyph(self, face, ch):
+        font = _FONTS[face]
+        if ch not in font["g"]:
+            face, font = FALLBACK, _FONTS[FALLBACK]
+            if ch not in font["g"]:
+                ch = "?"
+        adv, d = font["g"][ch]
+        if not d:
+            return face, adv, None
+        key = (face, ch)
+        if key not in self._glyphs:
+            self._glyphs[key] = (f"g{len(self._glyphs):x}", d)
+        return face, adv, self._glyphs[key][0]
+
+    def text(self, s, x, y, size, face="sans-400", fill=WHITE, opacity=1, anchor="start", track=0,
+             cls=None, extra=""):
+        """Draw `s` with its baseline at y. `track` is letter-spacing in px. Returns the svg fragment."""
+        width = measure(s, size, face, track)
+        if anchor == "middle":
+            x -= width / 2
+        elif anchor == "end":
+            x -= width
+        upm = _FONTS[face]["upm"]
+        k = size / upm
+        kern = _FONTS[face].get("k", {})
+        pen, uses = 0.0, []
+        for i, ch in enumerate(s):
+            used_face, adv, gid = self._glyph(face, ch)
+            # glyphs from the fallback face are scaled into this face's units
+            scale = _FONTS[face]["upm"] / _FONTS[used_face]["upm"]
+            if gid:
+                if scale != 1:
+                    uses.append(f'<use href="#{gid}" transform="translate({f(pen)} 0) scale({scale:.4f})"/>')
+                else:
+                    uses.append(f'<use href="#{gid}" x="{f(pen)}"/>')
+            pen += adv * scale + track / k
+            if i + 1 < len(s):
+                pen += kern.get(s[i:i + 2], 0)
+        op = f' fill-opacity="{opacity}"' if opacity != 1 else ""
+        c = f' class="{cls}"' if cls else ""
+        return (f'<g{c} fill="{fill}"{op} transform="translate({f(x)} {f(y)}) scale({k:.5f} {-k:.5f})"{extra}>'
+                f'{"".join(uses)}</g>')
+
+    def runs(self, parts, x, y, size, face="sans-400", anchor="start", track=0):
+        """Draw consecutive styled runs on one baseline: parts = [(text, fill, opacity, face|None), ...]."""
+        total = sum(measure(t, size, fc or face, track) for t, _, _, fc in parts)
+        if anchor == "middle":
+            x -= total / 2
+        elif anchor == "end":
+            x -= total
+        out = []
+        for t, fill, op, fc in parts:
+            out.append(self.text(t, x, y, size, fc or face, fill, op, track=track))
+            x += measure(t, size, fc or face, track)
+        return "".join(out)
+
+
+def measure(s, size, face="sans-400", track=0):
+    font = _FONTS[face]
+    k = size / font["upm"]
+    kern = font.get("k", {})
+    total = 0.0
+    for i, ch in enumerate(s):
+        if ch in font["g"]:
+            total += font["g"][ch][0] * k
+        else:
+            fb = _FONTS[FALLBACK]
+            total += fb["g"].get(ch, fb["g"]["?"])[0] * size / fb["upm"]
+        if i + 1 < len(s):
+            total += kern.get(s[i:i + 2], 0) * k + track
+    return total
+
+
+def balanced(s, size, face, max_w, track=0):
+    """Wrap, then even out a two-line result so the last line is never a lone word."""
+    lines = wrap(s, size, face, max_w, track)
+    if len(lines) != 2:
+        return lines
+    words = s.split()
+    best = min(range(1, len(words)), key=lambda i: max(measure(" ".join(words[:i]), size, face, track),
+                                                      measure(" ".join(words[i:]), size, face, track)))
+    return [" ".join(words[:best]), " ".join(words[best:])]
+
+
+def wrap(s, size, face, max_w, track=0):
+    """Greedy word wrap into lines no wider than max_w."""
+    lines, cur = [], ""
+    for word in s.split():
+        trial = f"{cur} {word}".strip()
+        if cur and measure(trial, size, face, track) > max_w:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = trial
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+# ---------------------------------------------------------------------------------------------- chrome
+def plate(doc, label_tl="", label_tr="", label_bl="", label_br="", r=18, base=VOID):
+    """Dark rounded plate with registration marks and tiny corner annotations."""
+    w, h = doc.w, doc.h
+    clip = doc.uid("clip")
+    doc.define(f'<clipPath id="{clip}"><rect width="{w}" height="{h}" rx="{r}"/></clipPath>')
+    doc.add(f'<rect width="{w}" height="{h}" rx="{r}" fill="{base}"/>')
+    return clip
+
+
+def plate_border(doc, r=18):
+    w, h = doc.w, doc.h
+    return (f'<rect x=".5" y=".5" width="{w - 1}" height="{h - 1}" rx="{r - .5}" stroke="#FFFFFF" '
+            f'stroke-opacity=".07"/>')
+
+
+def registration(doc, inset=22, arm=9, color=SILVER, opacity=.45):
+    """Corner crop marks."""
+    w, h = doc.w, doc.h
+    out = []
+    for cx, cy, sx, sy in ((inset, inset, 1, 1), (w - inset, inset, -1, 1),
+                           (inset, h - inset, 1, -1), (w - inset, h - inset, -1, -1)):
+        out.append(f'M{f(cx)} {f(cy + sy * arm)}V{f(cy)}H{f(cx + sx * arm)}')
+    return f'<path d="{"".join(out)}" stroke="{color}" stroke-opacity="{opacity}" stroke-width="1"/>'
+
+
+def corner_labels(doc, tl="", tr="", bl="", br="", inset=40, size=9.5, color=SILVER, opacity=.55):
+    w, h = doc.w, doc.h
+    out = []
+    if tl:
+        out.append(doc.text(tl, inset, 27, size, "mono-400", color, opacity, track=1.6))
+    if tr:
+        out.append(doc.text(tr, w - inset, 27, size, "mono-400", color, opacity, "end", track=1.6))
+    if bl:
+        out.append(doc.text(bl, inset, h - 19, size, "mono-400", color, opacity, track=1.6))
+    if br:
+        out.append(doc.text(br, w - inset, h - 19, size, "mono-400", color, opacity, "end", track=1.6))
+    return "".join(out)
+
+
+def stars(seed, w, h, n, avoid=None, twinkle=0.08, keep=()):
+    """Deterministic sparse starfield. `avoid` = (cx, cy, r) and `keep` = [(x0, y0, x1, y1)] stay clear,
+    so a star never sits beside a word and reads as punctuation."""
+    rng = random.Random(seed)
+    out, tw = [], []
+    for i in range(n):
+        x, y = rng.uniform(8, w - 8), rng.uniform(8, h - 8)
+        if avoid and math.hypot(x - avoid[0], y - avoid[1]) < avoid[2]:
+            continue
+        if any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1 in keep):
+            continue
+        mag = rng.random() ** 3
+        r = .35 + mag * 1.05
+        op = .18 + mag * .62
+        col = WHITE
+        roll = rng.random()
+        if roll < .07:
+            col = EMBER
+        elif roll < .11:
+            col = "#C4B5FD"
+        c = f'<circle cx="{f(x)}" cy="{f(y)}" r="{f(r)}" fill="{col}" opacity="{f(op)}"/>'
+        if rng.random() < twinkle and mag > .25:
+            tw.append(f'<circle class="tw" style="animation-delay:-{rng.uniform(0, 7):.1f}s" cx="{f(x)}" '
+                      f'cy="{f(y)}" r="{f(r)}" fill="{col}"/>')
+        else:
+            out.append(c)
+    return "".join(out) + "".join(tw)
+
+
+TWINKLE_CSS = ".tw{opacity:.7;animation:tw 7s ease-in-out infinite}@keyframes tw{0%,100%{opacity:.7}50%{opacity:.12}}"
+
+
+def ellipse_point(cx, cy, rx, ry, t, rot=0.0):
+    """Point on an ellipse at parameter t (radians), rotated by rot (radians) about its centre."""
+    x, y = rx * math.cos(t), ry * math.sin(t)
+    c, s = math.cos(rot), math.sin(rot)
+    return cx + x * c - y * s, cy + x * s + y * c
+
+
+def arc_half(cx, cy, rx, ry, upper, ccw=True):
+    """Half of an axis-aligned ellipse as a path. Direction is counter-clockwise on screen when ccw."""
+    if upper:   # right -> over the top -> left
+        return f"M{f(cx + rx)} {f(cy)}A{f(rx)} {f(ry)} 0 0 0 {f(cx - rx)} {f(cy)}"
+    return f"M{f(cx - rx)} {f(cy)}A{f(rx)} {f(ry)} 0 0 0 {f(cx + rx)} {f(cy)}"   # left -> under -> right
+
+
+def ellipse_len(rx, ry):
+    """Ramanujan's approximation of an ellipse perimeter."""
+    h = ((rx - ry) / (rx + ry)) ** 2
+    return math.pi * (rx + ry) * (1 + 3 * h / (10 + math.sqrt(4 - 3 * h)))

@@ -1,123 +1,305 @@
 {
   "name": "Yashsingh Chauhan",
+  "first": "Yashsingh",
+  "last": "Chauhan",
   "handle": "AIZEN-Hado",
-  "tagline": "AI ENGINEER  /  LLM SYSTEMS  /  FULL STACK",
+  "kicker": "AI ENGINEER  ·  LLM SYSTEMS",
+  "tagline": "Engineering intelligence that can be trained, tested, and trusted.",
+  "tagline_lines": [
+    "Engineering intelligence that can be",
+    "trained, tested, and trusted."
+  ],
+  "focus": [
+    "FINE-TUNING INFRA",
+    "AGENT EVALUATION",
+    "FULL-STACK AI"
+  ],
+  "coords": "BHOPAL, IN  ·  23.26° N  77.41° E",
+  "bands": [
+    {
+      "id": "identity",
+      "n": "01",
+      "title": [
+        "",
+        "Identity"
+      ],
+      "note": [
+        "SUBJECT  ·  AIZEN-HADO",
+        "AFFILIATION  ·  VIT"
+      ]
+    },
+    {
+      "id": "exploring",
+      "n": "02",
+      "title": [
+        "Currently ",
+        "exploring"
+      ],
+      "note": [
+        "FOUR ACTIVE VECTORS",
+        "DERIVED FROM PUBLIC WORK"
+      ]
+    },
+    {
+      "id": "arsenal",
+      "n": "03",
+      "title": [
+        "Engineering ",
+        "arsenal"
+      ],
+      "note": [
+        "TOOLS I HAVE SHIPPED WITH",
+        "NO PROFICIENCY BARS"
+      ]
+    },
+    {
+      "id": "work",
+      "n": "04",
+      "title": [
+        "Selected ",
+        "work"
+      ],
+      "note": [
+        "FOUR REPOSITORIES",
+        "SELECT A PLATE TO OPEN"
+      ]
+    },
+    {
+      "id": "telemetry",
+      "n": "05",
+      "title": [
+        "Development ",
+        "telemetry"
+      ],
+      "note": [
+        "SOURCE  ·  GITHUB GRAPHQL",
+        "REFRESH  ·  DAILY 03:17 UTC"
+      ]
+    },
+    {
+      "id": "frontier",
+      "n": "06",
+      "title": [
+        "The research ",
+        "frontier"
+      ],
+      "note": [
+        "OPEN QUESTIONS",
+        "LAB NOTES  ·  2026"
+      ]
+    },
+    {
+      "id": "contact",
+      "n": "07",
+      "title": [
+        "Establish ",
+        "connection"
+      ],
+      "note": [
+        "CHANNELS OPEN",
+        "RESPONSE  ·  ASYNC"
+      ]
+    }
+  ],
+  "vectors": [
+    {
+      "n": "V.01",
+      "title": [
+        "Agent",
+        "evaluation"
+      ],
+      "keys": "PASS^K  ·  MCNEMAR  ·  JUDGE CALIBRATION",
+      "art": "eval"
+    },
+    {
+      "n": "V.02",
+      "title": [
+        "Parameter-efficient",
+        "fine-tuning"
+      ],
+      "keys": "LORA  ·  SFT  ·  OPEN-WEIGHT MODELS",
+      "art": "lora"
+    },
+    {
+      "n": "V.03",
+      "title": [
+        "Tool-using",
+        "agents"
+      ],
+      "keys": "AGENT LOOPS  ·  MCP  ·  CLAUDE SKILLS",
+      "art": "agent"
+    },
+    {
+      "n": "V.04",
+      "title": [
+        "Retrieval &",
+        "graph reasoning"
+      ],
+      "keys": "RAG  ·  GRAPHRAG  ·  KNOWLEDGE GRAPHS",
+      "art": "graph"
+    }
+  ],
+  "stack": [
+    [
+      "AI / ML",
+      [
+        "PyTorch",
+        "Transformers",
+        "PEFT · LoRA",
+        "TRL",
+        "LiteLLM",
+        "scikit-learn"
+      ]
+    ],
+    [
+      "LANGUAGES",
+      [
+        "Python",
+        "TypeScript",
+        "JavaScript",
+        "Java",
+        "SQL"
+      ]
+    ],
+    [
+      "FRAMEWORKS",
+      [
+        "FastAPI",
+        "Next.js",
+        "React",
+        "Spring Boot",
+        "Express",
+        "React Native"
+      ]
+    ],
+    [
+      "INFRASTRUCTURE",
+      [
+        "PostgreSQL",
+        "Redis",
+        "MongoDB",
+        "SQLite",
+        "Docker",
+        "RunPod GPUs"
+      ]
+    ],
+    [
+      "TOOLING",
+      [
+        "OpenTelemetry",
+        "GitHub Actions",
+        "uv",
+        "Turborepo",
+        "pytest",
+        "Supabase"
+      ]
+    ]
+  ],
   "projects": [
     {
       "repo": "Fisherman",
-      "description": "",
-      "tags": ""
+      "name": "Fisherman",
+      "line": "CI for LLM agents, gated by statistics instead of vibes",
+      "status": "v0.2.0  ·  MIT",
+      "stack": "PYTHON  ·  OPENTELEMETRY  ·  LITELLM  ·  SQLITE  ·  ACTIONS",
+      "art": "fisherman",
+      "show": true,
+      "about": "A regression harness for LLM agents. Every run is traced with OpenTelemetry and stored in SQLite; cases are checked by deterministic rules and an LLM judge; multi-turn rollouts run against simulated users with hidden goals, including adversarial personas fishing for the system prompt; a GitHub Action replays baseline against candidate and blocks the merge on a significant regression.",
+      "why": "The verdict rests on McNemar's exact test alone, with the paired-bootstrap interval reported only as effect size, because gating on both would push the real false-block rate above α. The judges are tested too: scored against a human-labelled golden set (accuracy, Cohen's κ) before they are allowed to gate."
     },
     {
-      "repo": "LLMtuning",
-      "description": "",
-      "tags": ""
+      "repo": "SEMIgit",
+      "name": "SemiGit",
+      "line": "Semantic commits from AST-level diffs, local-first",
+      "status": "VS CODE EXTENSION",
+      "stack": "TYPESCRIPT  ·  TREE-SITTER  ·  SQLITE  ·  REACT 19  ·  TURBOREPO",
+      "art": "semigit",
+      "show": true,
+      "about": "A local-first VS Code extension that diffs code at the syntax-tree level as you work, scores whether a feature-sized milestone has been reached, and drafts a Conventional Commit from what actually changed. A Turborepo monorepo: a typed IPC contract, a local JSON-RPC service on SQLite, and a React 19 webview.",
+      "why": "Fully offline by default, with a heuristic engine and no API keys. OpenAI, Anthropic, Gemini, DeepSeek or Ollama, and precise tree-sitter parsing, slot in behind clean interfaces, and keys stay in the OS keychain."
     },
     {
       "repo": "pseudoCV",
-      "description": "",
-      "tags": ""
+      "name": "pseudoCV",
+      "line": "A Claude plugin that tailors a one-page LaTeX resume to a JD",
+      "status": "CLAUDE PLUGIN + SKILL",
+      "stack": "CLAUDE SKILLS  ·  PYTHON  ·  LATEX  ·  GITHUB API",
+      "art": "pseudocv",
+      "show": true,
+      "about": "A Claude plugin and skill that reads a job description, checks your public repositories, and writes an ATS-ready one-page LaTeX resume from your real work, with an opt-in target resume and gap report that show what to build next.",
+      "why": "It compiles the LaTeX and measures how full the page is, trimming or enriching until it fills exactly one page, without ever shrinking fonts or margins. It refuses to invent jobs, dates, grades or numbers."
     },
     {
       "repo": "CLASSLYAI",
-      "description": "",
-      "tags": ""
+      "name": "ClasslyAI",
+      "show": true,
+      "line": "An AI-native learning platform and course marketplace",
+      "status": "FULL-STACK  ·  REACT 19 + EXPRESS",
+      "stack": "REACT  ·  EXPRESS  ·  MONGODB  ·  STRIPE  ·  TESSERACT OCR",
+      "art": "classly",
+      "about": "A learning management system and course marketplace for students, instructors and admins: course publishing, quizzes and analytics, Google sign-in, Stripe checkout with coupons and invoices, and AI tools for notes, quiz generation and answer checking.",
+      "why": "The AI layer is provider-agnostic: one interface over OpenAI, Gemini and Anthropic written against their raw HTTP APIs, with no SDKs. Scanned or photographed answers are read with Tesseract OCR before an LLM grades them."
+    },
+    {
+      "repo": "fine-tune-lllm",
+      "name": "Savyis",
+      "line": "Multi-tenant SaaS for LoRA fine-tuning of open-weight models",
+      "status": "IN DEVELOPMENT  ·  BETA READINESS",
+      "stack": "NEXT.JS  ·  FASTAPI  ·  POSTGRES  ·  PEFT / TRL  ·  RUNPOD",
+      "art": "savyis",
+      "show": false,
+      "private": true,
+      "about": "Supervised LoRA fine-tuning of approved open-weight text models, built as a real multi-tenant product: dataset upload and line-level validation, a job control plane with leases, retries, budgets and cancellation, GPU workers on RunPod, and an artifact registry with signed export.",
+      "why": "Built in vertical slices behind 48 recorded architecture decisions. The trainer has completed a real LoRA run on an RTX 3090 with the adapter reloaded and verified, and the README says plainly what has not run yet. Nothing in the repository fakes training progress or metrics."
     }
   ],
-  "stack": {
-    "AI / LLM": [
-      "RAG",
-      "GraphRAG",
-      "Multi-Agent",
-      "MCP",
-      "PyTorch"
+  "contact": {
+    "headline": [
+      "Open to AI engineering roles",
+      "and research collaborations."
     ],
-    "BACKEND": [
-      "Python",
-      "FastAPI",
-      "Java",
-      "Spring Boot",
-      "Node.js"
-    ],
-    "FRONTEND": [
-      "React",
-      "TypeScript",
-      "Tailwind CSS",
-      "Vite"
-    ],
-    "DATA / INFRA": [
-      "PostgreSQL",
-      "MongoDB",
-      "Redis",
-      "Docker",
-      "AWS",
-      "Google Cloud"
+    "channels": [
+      {
+        "n": "CH.01",
+        "label": "Portfolio",
+        "detail": "portfoliio-jet.vercel.app",
+        "url": "https://portfoliio-jet.vercel.app/"
+      },
+      {
+        "n": "CH.02",
+        "label": "LinkedIn",
+        "detail": "in/yashsinghchauhan29",
+        "url": "https://www.linkedin.com/in/yashsinghchauhan29"
+      },
+      {
+        "n": "CH.03",
+        "label": "Email",
+        "detail": "yashchauhan2905@gmail.com",
+        "url": "mailto:yashchauhan2905@gmail.com"
+      },
+      {
+        "n": "CH.04",
+        "label": "WhatsApp",
+        "detail": "direct message",
+        "url": "https://wa.me/918962125787"
+      }
     ]
   },
-  "links": [
+  "also": [
     {
-      "label": "Portfolio",
-      "detail": "portfoliio-jet.vercel.app",
-      "url": "https://portfoliio-jet.vercel.app/"
+      "name": "Offline UPI Mesh",
+      "repo": "Offline_upi",
+      "note": "RSA + AES-GCM payments relayed over a gossip mesh, idempotent settlement"
     },
     {
-      "label": "LinkedIn",
-      "detail": "in/yashsinghchauhan29",
-      "url": "https://www.linkedin.com/in/yashsinghchauhan29"
+      "name": "SentnelOps",
+      "repo": "SentnelOps_Assignment",
+      "note": "rules plus Isolation Forest anomaly detection"
     },
     {
-      "label": "Email",
-      "detail": "yashchauhan2905@gmail.com",
-      "url": "mailto:yashchauhan2905@gmail.com"
-    },
-    {
-      "label": "WhatsApp",
-      "detail": "+91 89621 25787",
-      "url": "https://wa.me/918962125787"
+      "name": "InterviewIQ",
+      "repo": "3.interviewIQ",
+      "note": "AI interview platform"
     }
-  ],
-  "about": [
-    [
-      [
-        "AI engineer and full stack developer building ",
-        false
-      ],
-      [
-        "LLM systems",
-        true
-      ]
-    ],
-    [
-      [
-        "that go beyond the notebook and into production: ",
-        false
-      ],
-      [
-        "RAG",
-        true
-      ],
-      [
-        ", ",
-        false
-      ],
-      [
-        "GraphRAG",
-        true
-      ],
-      [
-        ",",
-        false
-      ]
-    ],
-    [
-      [
-        "multi-agent orchestration",
-        true
-      ],
-      [
-        ", and the Python services behind them.",
-        false
-      ]
-    ]
   ]
 }
