@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Build the static profile SVGs (hero, section headings, project rows, stack, link buttons).
+"""Build the static profile SVGs: hero, intro, project rows, systems, contact rows, footer.
 
-Edit scripts/profile.json, then run:  python3 scripts/build.py
+Each one is a slice of the same page-long canvas (see sf.py). Edit scripts/profile.json, then run:
+    python3 scripts/build.py
 """
 import json
 import math
 import pathlib
 import random
 
-from sf import AMBER, LINE, MONO, W, f, glyphs, mono, panel, svg_open, typed, units
+import sf
+from sf import AMBER, MONO, W, f, glyphs, svg_open, typed, units
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
@@ -82,7 +84,9 @@ def hero():
     # clip: everything except the whole shadow
     s.append(f'<clipPath id="outside"><path clip-rule="evenodd" d="M-200,-800H1200V1200H-200Z'
              f'M{CX - RS},{CY}A{RS},{RS} 0 0 1 {CX + RS},{CY}A{RS},{RS} 0 0 1 {CX - RS},{CY}Z"/></clipPath>')
-    s.append(f'<clipPath id="panel"><rect width="{W}" height="{H}" rx="6"/></clipPath>')
+    s.append(f'<clipPath id="panel"><path d="M0,6a6,6 0 0 1 6,-6H{W - 6}a6,6 0 0 1 6,6V{H}H0Z"/></clipPath>')
+    s.append(f'<linearGradient id="sink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{sf.bg_color(H)}" stop-opacity="0"/>'
+             f'<stop offset="1" stop-color="{sf.bg_color(H)}"/></linearGradient>')
     s.append("</defs>")
 
     s.append('<g clip-path="url(#panel)">')
@@ -147,6 +151,8 @@ def hero():
              f'path="M{CX + ex},{CY}A{ex},{f(ey)} 0 1 0 {CX - ex},{CY}A{ex},{f(ey)} 0 1 0 {CX + ex},{CY}"/></g>')
     s.append("</g></g></g>")
 
+    # sink into the page colour so the slice below continues seamlessly
+    s.append(f'<rect y="{H - 130}" width="{W}" height="130" fill="url(#sink)"/>')
     # name, plotted stroke by stroke, and one quiet line
     name = CFG["name"].upper()
     paths, _, t_end = glyphs(name, 500, 364, 540 / units(name), anchor="middle", cls="nm", t0=2.6)
@@ -161,85 +167,116 @@ def hero():
     return "\n".join(s)
 
 
-# --------------------------------------------------------------------------- section heading
-def heading(index, title):
-    H = 60
-    style = ("#run{animation:run 6s linear infinite}"
-             "@keyframes run{from{stroke-dashoffset:60}to{stroke-dashoffset:-1000}}")
-    s = [svg_open(W, H, title, style), panel(W, H)]
-    s.append(mono(f"{index:02d}", 40, 35, size=13, opacity=.38, spacing=2))
-    paths, width, _ = glyphs(title, 84, 22.5, 2.5)
-    s.append(f'<g {LINE} stroke="#fff" stroke-opacity=".9" stroke-width="1.5">{paths}</g>')
-    x0 = 84 + width + 28
-    s.append(f'<path d="M{f(x0)},30.5H960" stroke="#fff" stroke-opacity=".14" fill="none"/>')
-    s.append(f'<path id="run" d="M{f(x0)},30.5H960" stroke="#fff" stroke-opacity=".8" stroke-dasharray="60 2000" fill="none"/>')
+# --------------------------------------------------------------------------- shared slice shell
+def shell(name, label, extra_css="", defs=""):
+    _, h = sf.OFFSET[name]
+    css = sf.PARTICLE_CSS + sf.NEON_CSS + sf.BEAM_CSS + extra_css
+    return [svg_open(W, h, label, css), sf.backdrop(name), f"<defs>{sf.GLOW}{defs}</defs>", sf.particles(name)], h
+
+
+# --------------------------------------------------------------------------- intro + first heading
+def intro():
+    s, h = shell("intro", " ".join("".join(t for t, _ in line) for line in CFG["about"]))
+    y = 78
+    for line in CFG["about"]:
+        x = 60
+        for chunk, strong in line:
+            face, attrs = ("inter-600", 'fill="#ffffff"') if strong else ("inter-400", 'fill="#b4bcd0"')
+            svg, w = sf.text(chunk, x, y, 23, face, attrs=attrs)
+            s.append(svg)
+            x += w
+        y += 36
+    s.append(sf.neon_heading(1, "PROJECTS", sf.VIOLET, 262))
     s.append("</svg>")
     return "".join(s)
 
 
 # --------------------------------------------------------------------------- project row
+ROW_COLORS = ["#a78bfa", "#8b7bff", "#7090ff", "#5ea2ff"]
+
+
 def project(i, p):
-    desc, tags = p.get("description", ""), p.get("tags", "")
-    H = 136 if desc else 96
-    style = (f"#beam{{animation:beam 7s linear {i * 1.3:.1f}s infinite backwards}}"
-             "@keyframes beam{from{transform:translateX(-180px)}to{transform:translateX(1000px)}}")
-    s = [svg_open(W, H, p["repo"], style)]
-    s.append('<defs><linearGradient id="b" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-             '<stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
-             f'</linearGradient><clipPath id="c"><rect width="{W}" height="{H}" rx="6"/></clipPath></defs>')
-    s.append(panel(W, H))
-    s.append(mono(f"{i + 1:02d}", 40, 56, size=14, opacity=.36, spacing=2))
-    paths, _, _ = glyphs(p["repo"], 92, 36, 4)
-    s.append(f'<g {LINE} stroke="#f4f7fb" stroke-width="2">{paths}</g>')
-    if tags:
-        s.append(mono(tags.upper(), 920, 55, size=13, opacity=.45, spacing=2, anchor="end"))
+    name = f"p{i}"
+    color = ROW_COLORS[i % len(ROW_COLORS)]
+    s, h = shell(name, p["repo"] + (": " + p["description"] if p.get("description") else ""),
+                 f".beam{{animation-delay:{i * 1.4:.1f}s}}")
+    desc = p.get("description", "")
+    base = 60 if desc else 70
+    s.append(sf.label(f"{i + 1:02d}", 61, base - 2, color, .85, size=13))
+    s.append(sf.text(p["repo"], 112, base, 36, "inter-600")[0])
     if desc:
-        s.append(mono(desc, 92, 104, size=17, opacity=.6, spacing=.5))
-    s.append('<path d="M944,56L960,40M949,40H960V51" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.6" stroke-linecap="square"/>')
-    s.append(f'<g clip-path="url(#c)"><rect id="beam" x="0" y="{H - 1.4}" width="180" height="1.4" fill="url(#b)"/></g>')
+        s.append(sf.text(desc, 112, base + 30, 17, "inter-400", attrs='fill="#9aa3b8"')[0])
+    if p.get("tags"):
+        s.append(sf.label(p["tags"].upper(), 900, base - 4, color, .7, size=12, spacing=2, anchor="end"))
+    s.append(f'<g filter="url(#halo)">{sf.arrow(940, base - 22, color)}</g>')
+    s.append(sf.hairline(h - 1, color, name))
     s.append("</svg>")
     return "".join(s)
 
 
-# --------------------------------------------------------------------------- stack
-def stack():
+# --------------------------------------------------------------------------- systems
+def systems():
     cols = CFG["stack"]
-    rows = max(len(v) for v in cols.values())
-    H = 96 + rows * 29
-    style = ".dot{animation:dot 4s ease-in-out infinite}@keyframes dot{50%{opacity:.2}}"
-    s = [svg_open(W, H, "Stack: " + "; ".join(f"{k}: {', '.join(v)}" for k, v in cols.items()), style), panel(W, H)]
-    xs = [40, 280, 520, 750]
+    s, h = shell("systems", "Systems. " + ". ".join(f"{k}: {', '.join(v)}" for k, v in cols.items()))
+    s.append(sf.neon_heading(3, "SYSTEMS", sf.PINK, 132))
+    xs = [60, 290, 520, 740]
+    tints = [sf.PINK, sf.MAGENTA, "#fb7185", "#c084fc"]
     for c, (title, items) in enumerate(cols.items()):
-        x = xs[c]
-        s.append(f'<circle class="dot" style="animation-delay:-{c}s" cx="{x + 3}" cy="41" r="2.4" fill="#fff"/>')
-        s.append(mono(title, x + 16, 46, size=12, opacity=.45, spacing=3))
-        s.append(f'<path d="M{x},62H{x + 190}" stroke="#fff" stroke-opacity=".12"/>')
+        x, tint = xs[c], tints[c % len(tints)]
+        s.append(f'<circle class="tw" style="animation-duration:4s;animation-delay:-{c}s" cx="{x + 3}" cy="199" r="3" fill="{tint}"/>')
+        s.append(sf.label(title, x + 16, 204, tint, .95, size=12))
+        s.append(f'<rect x="{x}" y="219" width="190" height="1" fill="{tint}" fill-opacity=".3"/>')
         for r, item in enumerate(items):
-            s.append(mono(item, x, 96 + r * 29, size=17, opacity=.84, spacing=.5))
+            s.append(sf.text(item, x, 256 + r * 31, 19, "inter-400", attrs='fill="#e9ecf5"')[0])
     s.append("</svg>")
     return "".join(s)
 
 
-# --------------------------------------------------------------------------- link button
-def link(label):
-    w, h = 240, 64
-    s = [svg_open(w, h, label), panel(w, h)]
-    paths, _, _ = glyphs(label, 24, 25, 2.3)
-    s.append(f'<g {LINE} stroke="#f4f7fb" stroke-width="1.5">{paths}</g>')
-    s.append('<path d="M204,38L216,26M208,26H216V34" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.4" stroke-linecap="square"/>')
+# --------------------------------------------------------------------------- contact
+def contact():
+    s, h = shell("contact", "Contact")
+    s.append(sf.neon_heading(4, "CONTACT", AMBER, 132))
+    s.append("</svg>")
+    return "".join(s)
+
+
+LINK_COLORS = ["#ffb454", "#ffa24a", "#ff9442", "#ff8a3d"]
+
+
+def link(i, l):
+    name = f"l{i}"
+    color = LINK_COLORS[i % len(LINK_COLORS)]
+    s, h = shell(name, f'{l["label"]}: {l["detail"]}', f".beam{{animation-delay:{i * 1.4:.1f}s}}")
+    s.append(sf.text(l["label"], 60, 52, 28, "inter-600")[0])
+    s.append(sf.label(l["detail"], 900, 49, "#ffd9a8", .75, size=13, spacing=1, anchor="end"))
+    s.append(f'<g filter="url(#halo)">{sf.arrow(940, 30, color)}</g>')
+    s.append(sf.hairline(h - 1, color, name))
+    s.append("</svg>")
+    return "".join(s)
+
+
+# --------------------------------------------------------------------------- footer
+def footer():
+    s, h = shell("footer", "End of transmission", ".cur{animation:cur 1.1s steps(1) infinite}@keyframes cur{50%{opacity:0}}")
+    msg = "END OF TRANSMISSION"
+    w = sf.text_width(msg, 12, "mono-500", 5)
+    s.append(sf.label(msg, 500, 74, "#ffd9a8", .55, size=12, spacing=5, anchor="middle"))
+    s.append(f'<rect class="cur" x="{f(500 + w / 2 + 10)}" y="63" width="7" height="13" fill="{AMBER}"/>')
     s.append("</svg>")
     return "".join(s)
 
 
 def main():
     ASSETS.mkdir(exist_ok=True)
-    out = {"hero.svg": hero(), "stack.svg": stack()}
-    for i, title in enumerate(["PROJECTS", "TELEMETRY", "SYSTEMS", "CONTACT"]):
-        out[f"h-{title.lower()}.svg"] = heading(i + 1, title)
+    for old in ASSETS.glob("*.svg"):
+        if old.name != "telemetry.svg":
+            old.unlink()
+    out = {"hero.svg": hero(), "intro.svg": intro(), "systems.svg": systems(), "contact.svg": contact(),
+           "footer.svg": footer()}
     for i, p in enumerate(CFG["projects"]):
-        out[f"p-{p['repo'].lower()}.svg"] = project(i, p)
-    for l in CFG["links"]:
-        out[f"l-{l['file']}.svg"] = link(l["label"])
+        out[f"project-{i + 1}.svg"] = project(i, p)
+    for i, l in enumerate(CFG["links"]):
+        out[f"link-{i + 1}.svg"] = link(i, l)
     for name, svg in out.items():
         (ASSETS / name).write_text(svg, encoding="utf-8")
         print(f"assets/{name}  {len(svg) // 1024} KB")

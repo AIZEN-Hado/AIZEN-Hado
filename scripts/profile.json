@@ -3,21 +3,121 @@
   "handle": "AIZEN-Hado",
   "tagline": "AI ENGINEER  /  LLM SYSTEMS  /  FULL STACK",
   "projects": [
-    { "repo": "Fisherman", "description": "", "tags": "" },
-    { "repo": "LLMtuning", "description": "", "tags": "" },
-    { "repo": "pseudoCV", "description": "", "tags": "" },
-    { "repo": "CLASSLYAI", "description": "", "tags": "" }
+    {
+      "repo": "Fisherman",
+      "description": "",
+      "tags": ""
+    },
+    {
+      "repo": "LLMtuning",
+      "description": "",
+      "tags": ""
+    },
+    {
+      "repo": "pseudoCV",
+      "description": "",
+      "tags": ""
+    },
+    {
+      "repo": "CLASSLYAI",
+      "description": "",
+      "tags": ""
+    }
   ],
   "stack": {
-    "AI / LLM": ["RAG", "GraphRAG", "Multi-Agent", "MCP", "PyTorch"],
-    "BACKEND": ["Python", "FastAPI", "Java", "Spring Boot", "Node.js"],
-    "FRONTEND": ["React", "TypeScript", "Tailwind CSS", "Vite"],
-    "DATA / INFRA": ["PostgreSQL", "MongoDB", "Redis", "Docker", "AWS", "Google Cloud"]
+    "AI / LLM": [
+      "RAG",
+      "GraphRAG",
+      "Multi-Agent",
+      "MCP",
+      "PyTorch"
+    ],
+    "BACKEND": [
+      "Python",
+      "FastAPI",
+      "Java",
+      "Spring Boot",
+      "Node.js"
+    ],
+    "FRONTEND": [
+      "React",
+      "TypeScript",
+      "Tailwind CSS",
+      "Vite"
+    ],
+    "DATA / INFRA": [
+      "PostgreSQL",
+      "MongoDB",
+      "Redis",
+      "Docker",
+      "AWS",
+      "Google Cloud"
+    ]
   },
   "links": [
-    { "label": "PORTFOLIO", "file": "portfolio" },
-    { "label": "LINKEDIN", "file": "linkedin" },
-    { "label": "EMAIL", "file": "email" },
-    { "label": "WHATSAPP", "file": "whatsapp" }
+    {
+      "label": "Portfolio",
+      "detail": "portfoliio-jet.vercel.app",
+      "url": "https://portfoliio-jet.vercel.app/"
+    },
+    {
+      "label": "LinkedIn",
+      "detail": "in/yashsinghchauhan29",
+      "url": "https://www.linkedin.com/in/yashsinghchauhan29"
+    },
+    {
+      "label": "Email",
+      "detail": "yashchauhan2905@gmail.com",
+      "url": "mailto:yashchauhan2905@gmail.com"
+    },
+    {
+      "label": "WhatsApp",
+      "detail": "+91 89621 25787",
+      "url": "https://wa.me/918962125787"
+    }
+  ],
+  "about": [
+    [
+      [
+        "AI engineer and full stack developer building ",
+        false
+      ],
+      [
+        "LLM systems",
+        true
+      ]
+    ],
+    [
+      [
+        "that go beyond the notebook and into production: ",
+        false
+      ],
+      [
+        "RAG",
+        true
+      ],
+      [
+        ", ",
+        false
+      ],
+      [
+        "GraphRAG",
+        true
+      ],
+      [
+        ",",
+        false
+      ]
+    ],
+    [
+      [
+        "multi-agent orchestration",
+        true
+      ],
+      [
+        ", and the Python services behind them.",
+        false
+      ]
+    ]
   ]
 }
