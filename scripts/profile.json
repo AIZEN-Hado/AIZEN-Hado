@@ -7,19 +7,22 @@
       "name": "PolicyPilot AI",
       "url": "https://portfoliio-jet.vercel.app/docs/policypilot.html",
       "description": "Insurance claims decisions with RAG, knowledge graphs and multi-agent workflows",
-      "tags": "FastAPI · LangGraph · FAISS"
+      "tags": "FastAPI · LangGraph · FAISS",
+      "chip": "PROJECT · DOCS"
     },
     {
       "name": "ClasslyAI",
       "url": "https://github.com/AIZEN-Hado/CLASSLYAI",
       "description": "AI-powered learning platform and course marketplace, live in production",
-      "tags": "Firebase · Stripe · OCR"
+      "tags": "Firebase · Stripe · OCR",
+      "chip": "PROJECT · GITHUB"
     },
     {
       "name": "Offline UPI Mesh",
       "url": "https://github.com/AIZEN-Hado/Offline_upi",
       "description": "Offline payments over a multi-hop mesh, encrypted and executed exactly once",
-      "tags": "Spring Boot · RSA + AES-GCM"
+      "tags": "Spring Boot · RSA + AES-GCM",
+      "chip": "PROJECT · GITHUB"
     }
   ],
   "links": [
