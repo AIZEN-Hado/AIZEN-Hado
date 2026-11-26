@@ -46,10 +46,8 @@ def stars(y0, h):
                 continue
             col = EMBER if roll < .07 else ("#C4B5FD" if roll < .11 else WHITE)
             c = f'cx="{f(x)}" cy="{f(y - y0)}" r="{f(.35 + mag * 1.0)}" fill="{col}"'
-            if twk < .08 and mag > .2:
-                tw.append(f'<circle class="ct" style="animation-delay:-{(i * 1.37) % 6:.1f}s" {c}/>')
-            else:
-                out.append(f'<circle {c} opacity="{f(.16 + mag * .6)}"/>')
+            # static: a looping twinkle on every slice made each visible slice repaint on every frame while scrolling
+            out.append(f'<circle {c} opacity="{f(.16 + mag * .6)}"/>')
     return "".join(out) + "".join(tw)
 
 
