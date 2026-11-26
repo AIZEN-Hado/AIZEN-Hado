@@ -110,7 +110,7 @@ def dust(doc):
         col = canvas.mix(AMBER, EMBER, .6 * (1 - u) ** 2)
         back.append(f'<path d="{kit.arc_half(CX, CY, r, ry, True)}" stroke="{col}" stroke-opacity="{f(op * .6)}" stroke-width=".5"/>')
         front.append(f'<path d="{kit.arc_half(CX, CY, r, ry, False)}" stroke="{col}" stroke-opacity="{f(op)}" stroke-width=".5"/>')
-        r += 4.2 + u * 3.2
+        r += 6.4 + u * 4.2
     return "".join(back), "".join(front)
 
 
@@ -350,9 +350,8 @@ def build(profile, data):
         f'<stop offset=".5" stop-color="{AMBER}" stop-opacity=".07"/><stop offset="1" stop-color="{AMBER}" stop-opacity="0"/></linearGradient>')
     g.append(f'<rect width="{W}" height="{H}" fill="url(#{lift})"/>')
     g.append(f'<rect {canvas.extent(905, 92, 330, W, H)} fill="url(#{neb})"/>')
-    g.append(kit.stars(3, W, H, 150, avoid=(CX, CY, 150)))
+    g.append(kit.stars(3, W, H, 70, avoid=(CX, CY, 150)))
     g.append(f'<rect class="lum" {canvas.extent(CX, CY, 300, W, H)} fill="url(#{core})"/>')
-    g.append(stream(doc))
 
     back, lensed, front, now_xy, cells, angle, slot = disk(doc, data)
     # the bloom around the hole: two soft rings, as stacked strokes (see halo)
@@ -364,11 +363,6 @@ def build(profile, data):
               f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="2.2" stroke-opacity=".14"/>'
               f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width=".9"/></g>')
     g.append(f'<g transform="rotate({TILT} {CX} {CY})">{glow}{back}{lensed}{shadow}{photon}{front}{infall(doc)}{hotspot()}</g>')
-    g.append(month_scale(doc, cells, angle, slot))
-
-    # the scan: a faint band of light crossing the plate
-    g.append(f'<g class="scan" transform="translate(-200 0)"><rect x="-60" width="120" height="{H}" fill="url(#scanG)"/>'
-             f'<rect x="-.4" width=".8" height="{H}" fill="{AMBER}" fill-opacity=".18"/></g>')
 
     # melt into the shared canvas below, then let the shared glows reach up into the hero
     doc.define(f'<linearGradient id="melt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{VOID}" stop-opacity="0"/>'
@@ -377,21 +371,9 @@ def build(profile, data):
     g.append(canvas.grade_strip(doc, H - 130))      # the page's colour grade, ramped in so it meets the slice below exactly
     g.append(canvas.glows(doc))
 
-    # callouts: one physical, one real
-    rot = math.radians(TILT)
-    top = kit.ellipse_point(CX, CY - 1, 0, RS + 1.6, -math.pi / 2, rot)
-    g.append(f'<g class="fin" style="animation-delay:1.2s">'
-             + callout(doc, top[0] + 2, top[1], 136, "PHOTON SPHERE", "r = 1.5 rs  ·  light orbits") + '</g>')
-    nx, ny = CX + (now_xy[0] - CX) * math.cos(rot) - (now_xy[1] - CY) * math.sin(rot), \
-        CY + (now_xy[0] - CX) * math.sin(rot) + (now_xy[1] - CY) * math.cos(rot)
-    last7 = sum(c[3] for c in cells[-7:])
-    g.append(f'<g class="fin" style="animation-delay:3.3s">'
-             + callout(doc, nx, ny, 396, "LAST 7 DAYS", f"{last7} contributions  ·  newest edge") + '</g>')
-
     # legend and totals
     active = sum(1 for c in cells if c[3] > 0)
-    g.append(doc.text("RING = WEEKDAY  ·  ARC = WEEK  ·  GLOW = CONTRIBUTIONS", W - 40, H - 19, 9.5, "mono-400", SILVER, .6, "end", track=1.4))
-    g.append(doc.text(f'{data["total"]} CONTRIBUTIONS  ·  {active} ACTIVE DAYS  ·  LAST 365 DAYS', W - 40, H - 36, 9.5, "mono-500", AMBER, .9, "end", track=1.4))
+    g.append(doc.text(f'{data["total"]} CONTRIBUTIONS  ·  {active} ACTIVE DAYS  ·  LAST 365 DAYS', W - 40, H - 30, 9.5, "mono-500", AMBER, .9, "end", track=1.4))
 
     x = 58
     g.append(f'<path class="dr" d="M{x} 116h22" stroke="{AMBER}" stroke-width="1.4"/>')
@@ -421,8 +403,5 @@ def build(profile, data):
     del kit.LAYOUT.keep[n_keep:]                       # the text is already reserved above
     g.append(f'<g class="fx">{glint_txt}</g>')
 
-    g.append(kit.registration(doc))
-    g.append(kit.corner_labels(doc, tl="PLATE 00  /  EVENT HORIZON STUDY", tr=profile["handle"].upper() + "  /  2026",
-                               bl=profile["coords"], br=""))
     doc.add(f'<g clip-path="url(#{clip})">{"".join(g)}</g>', kit.plate_border(doc))
     return doc
