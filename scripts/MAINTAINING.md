@@ -38,8 +38,15 @@ forks), and the daily workflow's token cannot see private ones.
   images. Keep it that way, or GitHub's page colour shows through as grey lines.
 - **Why there are no collapsible sections.** GitHub's `<details>` adds an arrow line and 16px of margin around
   every block, which would break the seamless canvas (tested).
-- **Motion** is CSS only and stays inside a slice. Every slice has a frozen twin in `assets/static/`, swapped
-  in through `<picture>` for visitors with `prefers-reduced-motion`.
+- **Motion** is CSS and SMIL only (no scripts; GitHub strips them) and stays inside a slice. Every slice has a
+  frozen twin in `assets/static/`, swapped in through `<picture>` for visitors with `prefers-reduced-motion`.
+  Layers marked `.fx` (orbiting light, infalling grains, the photon-ring hot spot, the name glint) are purely
+  decorative: they are hidden, not frozen, in the twins. The hero plays one entrance at load (name rises, the
+  disk's arcs draw in oldest to newest, callouts land) and then loops quietly. Only the hero gets an entrance,
+  because one-shot animations in lower slices would finish before anyone scrolls to them.
+- **No animated masks.** An animated mask makes the browser re-render an off-screen layer every frame and
+  roughly halves the frame rate (measured). The disk therefore draws in with per-arc `stroke-dashoffset`,
+  which costs nothing once the entrance ends. Keep new motion to transforms, opacity and dashoffset.
 - **Text is outlined** from `glyphs.json` (Instrument Serif, Inter, JetBrains Mono; SIL OFL), because
   GitHub's image proxy blocks web fonts. Rebuild it only to add characters: see `scripts/fonts.py`.
 

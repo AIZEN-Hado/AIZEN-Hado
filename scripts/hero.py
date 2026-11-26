@@ -34,7 +34,22 @@ CSS = (kit.TWINKLE_CSS +
        ".lum{animation:lum 14s ease-in-out infinite}@keyframes lum{0%,100%{opacity:.55}50%{opacity:1}}"
        ".orb{animation:orb 60s linear infinite}@keyframes orb{to{stroke-dashoffset:0}}"
        ".now{transform-box:fill-box;transform-origin:center;animation:now 2.8s ease-out infinite}"
-       "@keyframes now{0%{transform:scale(.7);opacity:.9}100%{transform:scale(3);opacity:0}}")
+       "@keyframes now{0%{transform:scale(.7);opacity:.9}100%{transform:scale(3);opacity:0}}"
+       # Entrance. Every rule uses fill-mode `backwards`, so the resting style is the finished composition.
+       ".ad{stroke-dasharray:1;animation:ad .55s cubic-bezier(.4,0,.2,1) backwards}"
+       ".hot.ad{animation:ad .55s cubic-bezier(.4,0,.2,1) backwards,hot 5.5s ease-in-out infinite}"
+       "@keyframes ad{from{stroke-dashoffset:1}}"
+       ".rise{animation:rise 1.3s cubic-bezier(.16,1,.3,1) backwards}"
+       "@keyframes rise{from{transform:translateY(var(--d,100px))}}"
+       ".fin{animation:fin 1.2s ease-out backwards}@keyframes fin{from{opacity:0}}"
+       ".dr{stroke-dasharray:24;animation:dr .9s cubic-bezier(.5,0,.2,1) .15s backwards}"
+       "@keyframes dr{from{stroke-dashoffset:24}}"
+       # Loops. Light rides the rings at Keplerian speed (period ~ r^1.5), a hot spot circles the photon ring,
+       # and a glint crosses the name every ten seconds.
+       ".orbit{transform-origin:0 0;animation:orbit linear infinite}@keyframes orbit{to{transform:rotate(360deg)}}"
+       ".hs{animation:hs 6.5s linear infinite}@keyframes hs{to{stroke-dashoffset:-400}}"
+       ".glint{animation:glint 10s cubic-bezier(.45,0,.25,1) 4.2s infinite}"
+       "@keyframes glint{0%,68%{transform:translateX(-320px)}100%{transform:translateX(620px)}}")
 
 LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 # stroke width, colour, opacity for each activity level
@@ -87,7 +102,7 @@ def disk(doc, data):
     cells, cols = calendar(data)
     slot = 2 * math.pi / cols
     angle = lambda col: T_NOW + slot * (col - (cols - 1))           # centre of a week
-    layers = {True: [], False: []}                                    # True = back half (above the shadow)
+    layers = {(b, r): [] for b in (True, False) for r in range(7)}   # b True = back half (above the shadow)
     glows = {True: [], False: []}
     hot_n = 0
     for col, row, lvl, count, date in cells:
@@ -100,11 +115,15 @@ def disk(doc, data):
         w, color, op = STYLE[lvl]
         op *= .6 if back else 1
         d = f"M{f(x0)} {f(y0)}A{f(r)} {f(r * FLAT)} 0 0 1 {f(x1)} {f(y1)}"
-        cls = ""
+        # the year draws itself: each arc strokes in, oldest week first, ring by ring (no masks: they force every
+        # frame through off-screen layers, which doubled the cost of the image)
+        draw = .5 + row * .16 + (col / max(1, cols - 1)) * 2.4
         if lvl >= 3:
-            cls = f' class="hot" style="animation-delay:-{(hot_n * 1.37) % 5.5:.1f}s"'
+            cls = f' class="hot ad" pathLength="1" style="animation-delay:{draw:.2f}s,-{(hot_n * 1.37) % 5.5:.1f}s"'
             hot_n += 1
-        layers[back].append(f'<path{cls} d="{d}" stroke="{color}" stroke-opacity="{f(op)}" stroke-width="{w}" stroke-linecap="round"/>')
+        else:
+            cls = f' class="ad" pathLength="1" style="animation-delay:{draw:.2f}s"'
+        layers[(back, row)].append(f'<path{cls} d="{d}" stroke="{color}" stroke-opacity="{f(op)}" stroke-width="{w}" stroke-linecap="round"/>')
         if lvl >= 2:
             glows[back].append(f'<path d="{d}" stroke="{AMBER}" stroke-opacity="{f(.8 * (.6 if back else 1))}" stroke-width="{w + 3}" stroke-linecap="round"/>')
 
@@ -120,10 +139,33 @@ def disk(doc, data):
     doc.define(f'<clipPath id="{cb}"><rect x="-500" y="-500" width="2400" height="{500 + CY}"/></clipPath>'
                f'<clipPath id="{cf}"><rect x="-500" y="{CY}" width="2400" height="{600}"/></clipPath>')
     dust_b, dust_f = dust(doc)
-    blur = f'<g filter="url(#blur3)">{"".join(glows[True])}</g>'
-    back_g = f'<g clip-path="url(#{cb})">{dust_b}{blur}{"".join(layers[True])}{beam}</g>'
-    blur = f'<g filter="url(#blur3)">{"".join(glows[False])}</g>'
-    front_g = f'<g clip-path="url(#{cf})">{dust_f}{blur}{"".join(layers[False])}{beam}</g>'
+
+    # Light riding the rings. Decorative, drawn over the data, and removed under reduced motion.
+    def orbiters(back):
+        out = []
+        for row in range(7):
+            r = ring_r(row)
+            period = 15 * (r / R_IN) ** 1.5
+            n_c = 1 if row < 2 else (2 if row < 4 else 3)
+            for k in range(n_c):
+                segs = []
+                for i in range(9):
+                    a0, a1 = -i * .105, -(i + 1) * .105
+                    op = .85 * (1 - i / 9) ** 1.5 * (.62 if back else 1)
+                    col = "#FFE3BD" if i == 0 else AMBER
+                    segs.append(f'<path d="M{f(r * math.cos(a0))} {f(r * math.sin(a0))}A{f(r)} {f(r)} 0 0 0 '
+                                f'{f(r * math.cos(a1))} {f(r * math.sin(a1))}" stroke="{col}" stroke-opacity="{f(op)}" '
+                                f'stroke-width="{f(2.1 - i * .13)}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>')
+                phase = (row * 1.9 + k * period / n_c) % period
+                out.append(f'<g class="orbit" style="animation-duration:{period:.1f}s;animation-delay:-{phase:.1f}s">{"".join(segs)}</g>')
+        return (f'<g class="fx fin" style="animation-delay:3.4s" transform="translate({CX} {CY}) scale(1 {FLAT})">'
+                f'{"".join(out)}</g>')
+
+    def glow_layer(back):
+        return f'<g class="fin" style="animation-delay:2.1s"><g filter="url(#blur3)">{"".join(glows[back])}</g></g>'
+
+    back_g = f'<g clip-path="url(#{cb})">{dust_b}{glow_layer(True)}{"".join(a for r in range(7) for a in layers[(True, r)])}{orbiters(True)}{beam}</g>'
+    front_g = f'<g clip-path="url(#{cf})">{dust_f}{glow_layer(False)}{"".join(a for r in range(7) for a in layers[(False, r)])}{orbiters(False)}{beam}</g>'
 
     # the far side of the disk, lensed over and under the shadow
     lg = doc.uid("lg")
@@ -193,6 +235,65 @@ def callout(doc, x0, y0, y1, title, sub, right=960):
             + doc.text(sub, right, y1 + 11, 9.5, "mono-400", SILVER, .8, "end", track=1))
 
 
+def infall(doc):
+    """Matter spiralling into the hole: ~26 grains on spiral paths that speed up as they fall, each with a short
+    tail, fading toward ember as they near the photon ring (gravitational redshift). Purely decorative (.fx)."""
+    import random
+    rng = random.Random(11)
+    cx = doc.uid("pc")
+    hole = (f"M{CX - RS * 1.04} {CY}A{f(RS * 1.04)} {f(RS * 1.04)} 0 1 0 {f(CX + RS * 1.04)} {CY}"
+            f"A{f(RS * 1.04)} {f(RS * 1.04)} 0 1 0 {f(CX - RS * 1.04)} {CY}Z")
+    # outside the shadow everywhere, and anything in the front half (it passes in front of the hole)
+    doc.define(f'<clipPath id="{cx}"><path clip-rule="evenodd" d="M-500 -500H1700V1100H-500Z{hole}"/>'
+               f'<rect x="-500" y="{CY}" width="2400" height="600"/></clipPath>')
+    paths, grains = [], []
+    for i in range(36):
+        a0 = rng.uniform(0, 2 * math.pi)
+        r0 = R_OUT * rng.uniform(.86, 1.06)
+        sweep = rng.uniform(1.15, 1.75) * 2 * math.pi
+        pts = []
+        n = 56
+        for k in range(n + 1):
+            u = k / n
+            r = RS * 1.06 + (r0 - RS * 1.06) * (1 - u) ** 1.35
+            x, y = ellipse_xy(r, a0 + sweep * u)
+            pts.append(f"{'M' if k == 0 else 'L'}{f(x)} {f(y)}")
+        pid = doc.uid("fp")
+        doc.define(f'<path id="{pid}" d="{"".join(pts)}"/>')
+        dur = rng.uniform(7.5, 13)
+        begin = -rng.uniform(0, dur)
+        size = rng.uniform(.9, 1.6)
+        hot = rng.random() < .3
+        for tail, (lag, op, sc) in enumerate(((0, .95, 1), (.1, .5, .8), (.2, .26, .6))):
+            fill = WHITE if (hot and tail == 0) else AMBER
+            grains.append(
+                f'<circle r="{f(size * sc)}" fill="{fill}" opacity="0">'
+                f'<animateMotion dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" calcMode="spline" '
+                f'keyPoints="0;1" keyTimes="0;1" keySplines=".45 0 .9 .55"><mpath href="#{pid}"/></animateMotion>'
+                f'<animate attributeName="opacity" dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" '
+                f'values="0;{op};{op};0" keyTimes="0;.1;.8;1"/>'
+                f'<animate attributeName="fill" dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" '
+                f'values="{fill};{fill};{EMBER}" keyTimes="0;.6;1"/></circle>')
+    return f'<g class="fx fin" style="animation-delay:2.6s" clip-path="url(#{cx})">{"".join(grains)}</g>'
+
+
+def hotspot():
+    """A bright knot circling the photon ring: light that has orbited the hole once, brightest where it comes toward us."""
+    r = RS + 1.6
+    return (f'<g class="fx fin" style="animation-delay:3s">'
+            f'<circle class="hs" cx="{CX}" cy="{CY - 1}" r="{f(r)}" stroke="{WHITE}" stroke-width="2.4" stroke-linecap="round" '
+            f'stroke-dasharray="9 391" stroke-opacity=".95"/>'
+            f'<circle class="hs" style="animation-delay:-3.25s" cx="{CX}" cy="{CY - 1}" r="{f(r)}" stroke="{AMBER}" stroke-width="2" '
+            f'stroke-linecap="round" stroke-dasharray="5 395" stroke-opacity=".7"/></g>')
+
+
+def rise(doc, content, y0, y1, delay, dist=100, x0=30, x1=620):
+    """Reveal `content` by lifting it out of a clip box (a line rising from behind a mask)."""
+    cid = doc.uid("rc")
+    doc.define(f'<clipPath id="{cid}"><rect x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}"/></clipPath>')
+    return f'<g clip-path="url(#{cid})"><g class="rise" style="--d:{dist}px;animation-delay:{delay:.2f}s">{content}</g></g>'
+
+
 def build(profile, data):
     cells, cols = calendar(data)
     active = sum(1 for c in cells if c[3] > 0)
@@ -233,7 +334,7 @@ def build(profile, data):
     shadow = f'<circle cx="{CX}" cy="{CY}" r="{RS}" fill="#010102"/>'
     photon = (f'<g class="ring"><circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="1.6" filter="url(#blur3)"/>'
               f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width=".9"/></g>')
-    g.append(f'<g transform="rotate({TILT} {CX} {CY})">{glow}{back}{lensed}{shadow}{photon}{front}</g>')
+    g.append(f'<g transform="rotate({TILT} {CX} {CY})">{glow}{back}{lensed}{shadow}{photon}{front}{infall(doc)}{hotspot()}</g>')
     g.append(month_scale(doc, cells, angle, slot))
 
     # the scan: a faint band of light crossing the plate
@@ -251,11 +352,13 @@ def build(profile, data):
     # callouts: one physical, one real
     rot = math.radians(TILT)
     top = kit.ellipse_point(CX, CY - 1, 0, RS + 1.6, -math.pi / 2, rot)
-    g.append(callout(doc, top[0] + 2, top[1], 136, "PHOTON SPHERE", "r = 1.5 rs  ·  light orbits"))
+    g.append(f'<g class="fin" style="animation-delay:1.2s">'
+             + callout(doc, top[0] + 2, top[1], 136, "PHOTON SPHERE", "r = 1.5 rs  ·  light orbits") + '</g>')
     nx, ny = CX + (now_xy[0] - CX) * math.cos(rot) - (now_xy[1] - CY) * math.sin(rot), \
         CY + (now_xy[0] - CX) * math.sin(rot) + (now_xy[1] - CY) * math.cos(rot)
     last7 = sum(c[3] for c in cells[-7:])
-    g.append(callout(doc, nx, ny, 396, "LAST 7 DAYS", f"{last7} contributions  ·  newest edge"))
+    g.append(f'<g class="fin" style="animation-delay:3.3s">'
+             + callout(doc, nx, ny, 396, "LAST 7 DAYS", f"{last7} contributions  ·  newest edge") + '</g>')
 
     # legend and totals
     active = sum(1 for c in cells if c[3] > 0)
@@ -263,19 +366,37 @@ def build(profile, data):
     g.append(doc.text(f'{data["total"]} CONTRIBUTIONS  ·  {active} ACTIVE DAYS  ·  LAST 365 DAYS', W - 40, H - 36, 9.5, "mono-500", AMBER, .9, "end", track=1.4))
 
     x = 58
-    g.append(f'<path d="M{x} 116h22" stroke="{AMBER}" stroke-width="1.4"/>')
-    g.append(doc.text(profile["kicker"], x + 34, 120, 10.5, "mono-500", AMBER, 1, track=3.2))
-    g.append(doc.text(profile["first"], x - 3, 212, 80, "serif", WHITE))
-    g.append(doc.text(profile["last"], x - 1, 290, 80, "serif-i", WHITE))
+    g.append(f'<path class="dr" d="M{x} 116h22" stroke="{AMBER}" stroke-width="1.4"/>')
+    g.append(rise(doc, doc.text(profile["kicker"], x + 34, 120, 10.5, "mono-500", AMBER, 1, track=3.2), 100, 130, .3, 40))
+    first = doc.text(profile["first"], x - 3, 212, 80, "serif", WHITE)
+    last = doc.text(profile["last"], x - 1, 290, 80, "serif-i", WHITE)
+    g.append(rise(doc, first, 136, 238, .45, 130))
+    g.append(rise(doc, last, 222, 316, .62, 130))
     ty = 350
     for i, line in enumerate(profile["tagline_lines"]):
-        g.append(doc.text(line, x, ty + i * 30, 21, "sans-300", WHITE if i else SILVER, 1 if i else .95))
+        g.append(rise(doc, doc.text(line, x, ty + i * 30, 21, "sans-300", WHITE if i else SILVER, 1 if i else .95),
+                      ty + i * 30 - 24, ty + i * 30 + 10, .95 + i * .14, 44))
     fy = 446
     cx = x
+    chips = []
     for i, item in enumerate(profile["focus"]):
-        g.append(f'<rect x="{f(cx)}" y="{fy - 7}" width="5" height="5" fill="{AMBER}" transform="rotate(45 {f(cx + 2.5)} {fy - 4.5})"/>')
-        g.append(doc.text(item, cx + 14, fy, 10, "mono-400", WHITE, .78, track=2))
+        chips.append(f'<rect x="{f(cx)}" y="{fy - 7}" width="5" height="5" fill="{AMBER}" transform="rotate(45 {f(cx + 2.5)} {fy - 4.5})"/>')
+        chips.append(doc.text(item, cx + 14, fy, 10, "mono-400", WHITE, .78, track=2))
         cx += 14 + kit.measure(item, 10, "mono-400", 2) + 26
+    g.append(rise(doc, "".join(chips), fy - 20, fy + 10, 1.4, 34))
+
+    # a warm glint crossing the name every ten seconds: the same two lines again, shown only inside a moving band
+    n_keep = len(kit.LAYOUT.keep)
+    glint_txt = (doc.text(profile["first"], x - 3, 212, 80, "serif", "#FFC98A") +
+                 doc.text(profile["last"], x - 1, 290, 80, "serif-i", "#FFC98A"))
+    del kit.LAYOUT.keep[n_keep:]                       # the text is already reserved above
+    gm = doc.uid("gm")
+    doc.define(f'<linearGradient id="{gm}b" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+               f'<stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+               f'<mask id="{gm}" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
+               f'<g transform="skewX(-20)"><rect class="glint" x="0" y="0" width="110" height="{H}" fill="url(#{gm}b)" '
+               f'transform="translate(-320 0)"/></g></mask>')
+    g.append(f'<g class="fx" mask="url(#{gm})">{glint_txt}</g>')
 
     g.append(kit.registration(doc))
     g.append(kit.corner_labels(doc, tl="PLATE 00  /  EVENT HORIZON STUDY", tr=profile["handle"].upper() + "  /  2026",

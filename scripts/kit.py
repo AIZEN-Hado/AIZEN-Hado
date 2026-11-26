@@ -32,8 +32,9 @@ FALLBACK = "sans-400"
 # so prefers-reduced-motion (or a renderer without CSS animation) still shows a complete image.
 # Browsers do not reliably apply this inside an SVG shown as <img>, so the README also swaps in the frozen
 # twin from assets/static/ with <picture><source media="(prefers-reduced-motion: reduce)">.
-MOTION_OFF = "@media (prefers-reduced-motion:reduce){*{animation:none!important}}"
-STATIC = "*{animation:none!important}"
+# .fx marks purely decorative moving layers (SMIL particles, orbiting light): they vanish rather than freeze.
+MOTION_OFF = "@media (prefers-reduced-motion:reduce){*{animation:none!important}.fx{display:none}}"
+STATIC = "*{animation:none!important}.fx{display:none}"
 
 
 def f(x):
