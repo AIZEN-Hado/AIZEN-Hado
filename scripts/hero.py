@@ -12,7 +12,9 @@ side hugging the shadow between them. Physics labels are real (photon sphere at 
 """
 import datetime
 import math
+import re
 
+import canvas
 import kit
 from kit import AMBER, EMBER, SILVER, VIOLET, VOID, WHITE, f
 
@@ -45,15 +47,32 @@ CSS = (kit.TWINKLE_CSS +
        ".dr{stroke-dasharray:24;animation:dr .9s cubic-bezier(.5,0,.2,1) .15s backwards}"
        "@keyframes dr{from{stroke-dashoffset:24}}"
        # Loops. Light rides the rings at Keplerian speed (period ~ r^1.5), a hot spot circles the photon ring,
-       # and a glint crosses the name every ten seconds.
+       # and a warm wave runs through the letters of the name every ten seconds.
        ".orbit{transform-origin:0 0;animation:orbit linear infinite}@keyframes orbit{to{transform:rotate(360deg)}}"
        ".hs{animation:hs 6.5s linear infinite}@keyframes hs{to{stroke-dashoffset:-400}}"
-       ".glint{animation:glint 10s cubic-bezier(.45,0,.25,1) 4.2s infinite}"
-       "@keyframes glint{0%,68%{transform:translateX(-320px)}100%{transform:translateX(620px)}}")
+       ".gw{opacity:0;animation:gw 10s ease-in-out infinite}"
+       "@keyframes gw{0%{opacity:0}2.6%{opacity:.95}8%{opacity:0}100%{opacity:0}}")
 
 LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 # stroke width, colour, opacity for each activity level
 STYLE = {0: (.7, AMBER, .24), 1: (1.3, AMBER, .62), 2: (1.8, AMBER, .8), 3: (2.3, AMBER, .95), 4: (2.8, EMBER, 1)}
+
+
+def halo(shape, width, peak, sigma, n=9):
+    """What a Gaussian blur makes of a stroked outline, without a filter: n translucent strokes whose widths follow
+    the blur profile, so the glow is brightest on the line and fades smoothly on both sides. `shape` holds the
+    element's geometry; `peak` is the opacity at the centre of the glow. (A filter on a rotated group costs a
+    full off-screen layer plus a resample on every frame; these are a handful of plain strokes.)"""
+    out = []
+    for i in range(1, n + 1):
+        half = sigma * math.sqrt(-2 * math.log(i / n)) if i < n else 0
+        out.append(shape.replace("/>", f' stroke-width="{f(width + 2 * half)}" stroke-opacity="{f(peak / n)}"/>'))
+    return "".join(out)
+
+
+def box(cx, cy, hx, hy):
+    """x/y/width/height attributes for a box centred on (cx, cy) with half-extents hx, hy."""
+    return f'x="{f(cx - hx)}" y="{f(cy - hy)}" width="{f(2 * hx)}" height="{f(2 * hy)}"'
 
 
 def calendar(data):
@@ -80,20 +99,18 @@ def ellipse_xy(r, t):
 
 def dust(doc):
     """Fine continuous rings between and around the data tracks: the photographic look of a disk."""
-    grad = doc.uid("dg")
-    doc.define(
-        f'<linearGradient id="{grad}" gradientUnits="userSpaceOnUse" x1="{CX - 300}" y1="0" x2="{CX + 300}" y2="0">'
-        f'<stop offset="0" stop-color="{EMBER}"/><stop offset=".3" stop-color="{AMBER}"/>'
-        f'<stop offset=".7" stop-color="{AMBER}" stop-opacity=".6"/><stop offset="1" stop-color="{VIOLET}" stop-opacity=".4"/></linearGradient>')
     back, front = [], []
     r = R_IN - 26
     while r < R_OUT + 8:
         u = max(0, (r - R_IN) / (R_OUT - R_IN))
         op = (1 - u) ** 1.5 * .5 + .06
         ry = r * FLAT
-        back.append(f'<path d="{kit.arc_half(CX, CY, r, ry, True)}" stroke="url(#{grad})" stroke-opacity="{f(op * .6)}" stroke-width=".5"/>')
-        front.append(f'<path d="{kit.arc_half(CX, CY, r, ry, False)}" stroke="url(#{grad})" stroke-opacity="{f(op)}" stroke-width=".5"/>')
-        r += 3.1 + u * 2.4
+        # a solid colour per ring, white-hot at the inner edge and amber outward. (Each ring used to carry a
+        # horizontal colour gradient, which cost more to paint than any other part of the disk.)
+        col = canvas.mix(AMBER, EMBER, .6 * (1 - u) ** 2)
+        back.append(f'<path d="{kit.arc_half(CX, CY, r, ry, True)}" stroke="{col}" stroke-opacity="{f(op * .6)}" stroke-width=".5"/>')
+        front.append(f'<path d="{kit.arc_half(CX, CY, r, ry, False)}" stroke="{col}" stroke-opacity="{f(op)}" stroke-width=".5"/>')
+        r += 4.2 + u * 3.2
     return "".join(back), "".join(front)
 
 
@@ -125,7 +142,9 @@ def disk(doc, data):
             cls = f' class="ad" pathLength="1" style="animation-delay:{draw:.2f}s"'
         layers[(back, row)].append(f'<path{cls} d="{d}" stroke="{color}" stroke-opacity="{f(op)}" stroke-width="{w}" stroke-linecap="round"/>')
         if lvl >= 2:
-            glows[back].append(f'<path d="{d}" stroke="{AMBER}" stroke-opacity="{f(.8 * (.6 if back else 1))}" stroke-width="{w + 3}" stroke-linecap="round"/>')
+            k = .6 if back else 1
+            glows[back].append(f'<path d="{d}" stroke="{AMBER}" stroke-opacity="{f(.25 * k)}" stroke-width="{f(w + 7)}" stroke-linecap="round"/>'
+                               f'<path d="{d}" stroke="{AMBER}" stroke-opacity="{f(.43 * k)}" stroke-width="{f(w + 3.4)}" stroke-linecap="round"/>')
 
     # the sweep: a beam turning in the disk plane (a circle squashed by FLAT), drawn once per half
     trail = []
@@ -146,23 +165,23 @@ def disk(doc, data):
         for row in range(7):
             r = ring_r(row)
             period = 15 * (r / R_IN) ** 1.5
-            n_c = 1 if row < 2 else (2 if row < 4 else 3)
+            n_c = 1 if row < 3 else 2
             for k in range(n_c):
                 segs = []
-                for i in range(9):
-                    a0, a1 = -i * .105, -(i + 1) * .105
-                    op = .85 * (1 - i / 9) ** 1.5 * (.62 if back else 1)
+                for i in range(6):
+                    a0, a1 = -i * .157, -(i + 1) * .157
+                    op = .85 * (1 - i / 6) ** 1.5 * (.62 if back else 1)
                     col = "#FFE3BD" if i == 0 else AMBER
                     segs.append(f'<path d="M{f(r * math.cos(a0))} {f(r * math.sin(a0))}A{f(r)} {f(r)} 0 0 0 '
                                 f'{f(r * math.cos(a1))} {f(r * math.sin(a1))}" stroke="{col}" stroke-opacity="{f(op)}" '
-                                f'stroke-width="{f(2.1 - i * .13)}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>')
+                                f'stroke-width="{f(2.1 - i * .2)}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>')
                 phase = (row * 1.9 + k * period / n_c) % period
                 out.append(f'<g class="orbit" style="animation-duration:{period:.1f}s;animation-delay:-{phase:.1f}s">{"".join(segs)}</g>')
         return (f'<g class="fx fin" style="animation-delay:3.4s" transform="translate({CX} {CY}) scale(1 {FLAT})">'
                 f'{"".join(out)}</g>')
 
     def glow_layer(back):
-        return f'<g class="fin" style="animation-delay:2.1s"><g filter="url(#blur3)">{"".join(glows[back])}</g></g>'
+        return f'<g class="fin" style="animation-delay:2.1s">{"".join(glows[back])}</g>'
 
     back_g = f'<g clip-path="url(#{cb})">{dust_b}{glow_layer(True)}{"".join(a for r in range(7) for a in layers[(True, r)])}{orbiters(True)}{beam}</g>'
     front_g = f'<g clip-path="url(#{cf})">{dust_f}{glow_layer(False)}{"".join(a for r in range(7) for a in layers[(False, r)])}{orbiters(False)}{beam}</g>'
@@ -212,10 +231,15 @@ def month_scale(doc, cells, angle, slot):
 
 
 def stream(doc):
-    """One slow violet stream, the only ambient motion in the plane besides the sweep."""
+    """One slow violet stream, the only ambient motion in the plane besides the sweep. It fades in from the left
+    through its own stroke gradient (a mask would cost a full-canvas off-screen layer on every frame)."""
     vl = kit.ellipse_len(430, 128)
+    fid = doc.uid("fv")
+    doc.define(f'<linearGradient id="{fid}" gradientUnits="userSpaceOnUse" x1="400" x2="520" y1="0" y2="0" '
+               f'gradientTransform="rotate({-(TILT + 4)} {CX} {CY})">'      # undo the ellipse's own rotation
+               f'<stop offset="0" stop-color="{VIOLET}" stop-opacity="0"/><stop offset="1" stop-color="{VIOLET}"/></linearGradient>')
     return (f'<ellipse class="orb" cx="{CX}" cy="{CY}" rx="430" ry="128" transform="rotate({TILT + 4} {CX} {CY})" '
-            f'stroke="{VIOLET}" stroke-opacity=".4" stroke-width="1" stroke-dasharray="1 9 44 9" '
+            f'stroke="url(#{fid})" stroke-opacity=".4" stroke-width="1" stroke-dasharray="1 9 44 9" '
             f'stroke-dashoffset="{f(vl)}" pathLength="{f(vl)}"/>')
 
 
@@ -236,7 +260,7 @@ def callout(doc, x0, y0, y1, title, sub, right=960):
 
 
 def infall(doc):
-    """Matter spiralling into the hole: ~26 grains on spiral paths that speed up as they fall, each with a short
+    """Matter spiralling into the hole: ~22 grains on spiral paths that speed up as they fall, each with a short
     tail, fading toward ember as they near the photon ring (gravitational redshift). Purely decorative (.fx)."""
     import random
     rng = random.Random(11)
@@ -247,7 +271,7 @@ def infall(doc):
     doc.define(f'<clipPath id="{cx}"><path clip-rule="evenodd" d="M-500 -500H1700V1100H-500Z{hole}"/>'
                f'<rect x="-500" y="{CY}" width="2400" height="600"/></clipPath>')
     paths, grains = [], []
-    for i in range(36):
+    for i in range(22):
         a0 = rng.uniform(0, 2 * math.pi)
         r0 = R_OUT * rng.uniform(.86, 1.06)
         sweep = rng.uniform(1.15, 1.75) * 2 * math.pi
@@ -264,7 +288,7 @@ def infall(doc):
         begin = -rng.uniform(0, dur)
         size = rng.uniform(.9, 1.6)
         hot = rng.random() < .3
-        for tail, (lag, op, sc) in enumerate(((0, .95, 1), (.1, .5, .8), (.2, .26, .6))):
+        for tail, (lag, op, sc) in enumerate(((0, .95, 1), (.12, .45, .75))):
             fill = WHITE if (hot and tail == 0) else AMBER
             grains.append(
                 f'<circle r="{f(size * sc)}" fill="{fill}" opacity="0">'
@@ -272,8 +296,8 @@ def infall(doc):
                 f'keyPoints="0;1" keyTimes="0;1" keySplines=".45 0 .9 .55"><mpath href="#{pid}"/></animateMotion>'
                 f'<animate attributeName="opacity" dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" '
                 f'values="0;{op};{op};0" keyTimes="0;.1;.8;1"/>'
-                f'<animate attributeName="fill" dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" '
-                f'values="{fill};{fill};{EMBER}" keyTimes="0;.6;1"/></circle>')
+                + (f'<animate attributeName="fill" dur="{dur:.2f}s" begin="{begin - lag:.2f}s" repeatCount="indefinite" '
+                   f'values="{fill};{fill};{EMBER}" keyTimes="0;.6;1"/>' if tail == 0 else "") + '</circle>')
     return f'<g class="fx fin" style="animation-delay:2.6s" clip-path="url(#{cx})">{"".join(grains)}</g>'
 
 
@@ -285,6 +309,15 @@ def hotspot():
             f'stroke-dasharray="9 391" stroke-opacity=".95"/>'
             f'<circle class="hs" style="animation-delay:-3.25s" cx="{CX}" cy="{CY - 1}" r="{f(r)}" stroke="{AMBER}" stroke-width="2" '
             f'stroke-linecap="round" stroke-dasharray="5 395" stroke-opacity=".7"/></g>')
+
+
+def glint_wave(text, lag):
+    """Turn one run of glyphs into a travelling pulse: each letter lights a moment after the one to its left."""
+    k = float(re.search(r"scale\(([\d.]+) ", text).group(1))
+    def one(m):
+        pen = float(m.group(2)) * k                       # the letter's distance from the start of the line, in px
+        return f'<use class="gw" style="animation-delay:{4.2 + lag + pen / 330:.2f}s" href="#{m.group(1)}" x="{m.group(2)}"/>'
+    return re.sub(r'<use href="#([^"]+)" x="([^"]+)"/>', one, text)
 
 
 def rise(doc, content, y0, y1, delay, dist=100, x0=30, x1=620):
@@ -301,7 +334,7 @@ def build(profile, data):
     alt = (f'{profile["name"]}: {profile["tagline"]} A black hole whose accretion disk is the last 365 days of '
            f'GitHub activity: {data["total"]} contributions on {active} active days, {last7} in the last 7 days.')
     doc = kit.Doc(W, H, alt, CSS)
-    clip = kit.plate(doc, density=0)
+    clip = kit.plate(doc, density=0, bg=False)      # the opaque `lift` below covers a plate background completely
 
     g = []
     neb, lift, core = doc.uid("ng"), doc.uid("lift"), doc.uid("core")
@@ -313,26 +346,22 @@ def build(profile, data):
         f'<radialGradient id="{core}" cx="{CX}" cy="{CY}" r="300" gradientUnits="userSpaceOnUse">'
         f'<stop offset="0" stop-color="{AMBER}" stop-opacity=".2"/><stop offset=".45" stop-color="{AMBER}" stop-opacity=".05"/>'
         f'<stop offset="1" stop-color="{AMBER}" stop-opacity="0"/></radialGradient>'
-        f'<filter id="blur8" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>'
-        f'<filter id="blur3" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter>'
         f'<linearGradient id="scanG" x1="0" x2="1"><stop offset="0" stop-color="{AMBER}" stop-opacity="0"/>'
         f'<stop offset=".5" stop-color="{AMBER}" stop-opacity=".07"/><stop offset="1" stop-color="{AMBER}" stop-opacity="0"/></linearGradient>')
     g.append(f'<rect width="{W}" height="{H}" fill="url(#{lift})"/>')
-    g.append(f'<rect width="{W}" height="{H}" fill="url(#{neb})"/>')
+    g.append(f'<rect {canvas.extent(905, 92, 330, W, H)} fill="url(#{neb})"/>')
     g.append(kit.stars(3, W, H, 150, avoid=(CX, CY, 150)))
-    g.append(f'<rect class="lum" width="{W}" height="{H}" fill="url(#{core})"/>')
-    doc.define(f'<linearGradient id="fadeL" gradientUnits="userSpaceOnUse" x1="400" x2="520" y1="0" y2="0">'
-               f'<stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff"/></linearGradient>'
-               f'<mask id="fade" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
-               f'<rect width="{W}" height="{H}" fill="url(#fadeL)"/></mask>')
-    g.append(f'<g mask="url(#fade)">{stream(doc)}</g>')
+    g.append(f'<rect class="lum" {canvas.extent(CX, CY, 300, W, H)} fill="url(#{core})"/>')
+    g.append(stream(doc))
 
     back, lensed, front, now_xy, cells, angle, slot = disk(doc, data)
-    glow = (f'<g filter="url(#blur8)" opacity=".75"><ellipse cx="{CX}" cy="{CY}" rx="{RS * 2.1}" ry="{RS * 2.1 * FLAT * 1.4}" '
-            f'stroke="{AMBER}" stroke-width="10" stroke-opacity=".6"/>'
-            f'<circle cx="{CX}" cy="{CY - 3}" r="{RS * 1.18}" stroke="{AMBER}" stroke-width="9" stroke-opacity=".55"/></g>')
+    # the bloom around the hole: two soft rings, as stacked strokes (see halo)
+    glow = (halo(f'<ellipse cx="{CX}" cy="{CY}" rx="{RS * 2.1}" ry="{RS * 2.1 * FLAT * 1.4}" stroke="{AMBER}"/>', 10, .21, 8.4) +
+            halo(f'<circle cx="{CX}" cy="{CY - 3}" r="{RS * 1.18}" stroke="{AMBER}"/>', 9, .176, 8.4))
     shadow = f'<circle cx="{CX}" cy="{CY}" r="{RS}" fill="#010102"/>'
-    photon = (f'<g class="ring"><circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="1.6" filter="url(#blur3)"/>'
+    photon = (f'<g class="ring"><circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="8" stroke-opacity=".08"/>'
+              f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="4.4" stroke-opacity=".13"/>'
+              f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width="2.2" stroke-opacity=".14"/>'
               f'<circle cx="{CX}" cy="{CY - 1}" r="{RS + 1.6}" stroke="{EMBER}" stroke-width=".9"/></g>')
     g.append(f'<g transform="rotate({TILT} {CX} {CY})">{glow}{back}{lensed}{shadow}{photon}{front}{infall(doc)}{hotspot()}</g>')
     g.append(month_scale(doc, cells, angle, slot))
@@ -345,8 +374,7 @@ def build(profile, data):
     doc.define(f'<linearGradient id="melt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{VOID}" stop-opacity="0"/>'
                f'<stop offset="1" stop-color="{VOID}"/></linearGradient>')
     g.append(f'<rect y="{H - 130}" width="{W}" height="130" fill="url(#melt)"/>')
-    import canvas
-    g.append(canvas.grade(doc))          # the page's colour grade, continuous with the slice below
+    g.append(canvas.grade_strip(doc, H - 130))      # the page's colour grade, ramped in so it meets the slice below exactly
     g.append(canvas.glows(doc))
 
     # callouts: one physical, one real
@@ -385,18 +413,13 @@ def build(profile, data):
         cx += 14 + kit.measure(item, 10, "mono-400", 2) + 26
     g.append(rise(doc, "".join(chips), fy - 20, fy + 10, 1.4, 34))
 
-    # a warm glint crossing the name every ten seconds: the same two lines again, shown only inside a moving band
+    # a warm wave through the letters of the name every ten seconds: the same two lines again, one glyph at a time.
+    # (Per-glyph opacity costs nothing while idle. A moving mask costs a full off-screen layer on every frame.)
     n_keep = len(kit.LAYOUT.keep)
-    glint_txt = (doc.text(profile["first"], x - 3, 212, 80, "serif", "#FFC98A") +
-                 doc.text(profile["last"], x - 1, 290, 80, "serif-i", "#FFC98A"))
+    glint_txt = (glint_wave(doc.text(profile["first"], x - 3, 212, 80, "serif", "#FFC98A"), 0) +
+                 glint_wave(doc.text(profile["last"], x - 1, 290, 80, "serif-i", "#FFC98A"), .35))
     del kit.LAYOUT.keep[n_keep:]                       # the text is already reserved above
-    gm = doc.uid("gm")
-    doc.define(f'<linearGradient id="{gm}b" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-               f'<stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
-               f'<mask id="{gm}" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}">'
-               f'<g transform="skewX(-20)"><rect class="glint" x="0" y="0" width="110" height="{H}" fill="url(#{gm}b)" '
-               f'transform="translate(-320 0)"/></g></mask>')
-    g.append(f'<g class="fx" mask="url(#{gm})">{glint_txt}</g>')
+    g.append(f'<g class="fx">{glint_txt}</g>')
 
     g.append(kit.registration(doc))
     g.append(kit.corner_labels(doc, tl="PLATE 00  /  EVENT HORIZON STUDY", tr=profile["handle"].upper() + "  /  2026",

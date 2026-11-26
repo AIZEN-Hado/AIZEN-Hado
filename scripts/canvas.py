@@ -53,6 +53,13 @@ def stars(y0, h):
     return "".join(out) + "".join(tw)
 
 
+def extent(cx, cy, r, w, h):
+    """The part of a w x h canvas a radial gradient of radius r can touch (it is transparent beyond r), as rect
+    attributes. Filling only that box instead of the whole slice is exact and cuts the paint work."""
+    x0, y0, x1, y1 = max(0, cx - r), max(0, cy - r), min(w, cx + r), min(h, cy + r)
+    return f'x="{f(x0)}" y="{f(y0)}" width="{f(x1 - x0)}" height="{f(y1 - y0)}"'
+
+
 def glows(doc):
     """Radial glows registered by slices (global, so they continue across seams)."""
     y0, h = doc.y0, doc.h
@@ -64,8 +71,26 @@ def glows(doc):
         doc.define(f'<radialGradient id="{gid}" cx="{f(cx)}" cy="{f(cy - y0)}" r="{f(r)}" gradientUnits="userSpaceOnUse">'
                    f'<stop offset="0" stop-color="{col}" stop-opacity="{op}"/>'
                    f'<stop offset="1" stop-color="{col}" stop-opacity="0"/></radialGradient>')
-        out.append(f'<rect width="{doc.w}" height="{h}" fill="url(#{gid})"/>')
+        out.append(f'<rect {extent(cx, cy - y0, r, doc.w, h)} fill="url(#{gid})"/>')
     return "".join(out)
+
+
+def mix(base_hex, top_hex, a):
+    """`top_hex` at opacity `a` over `base_hex`, as an opaque hex colour."""
+    ch = lambda h, i: int(h[1 + 2 * i:3 + 2 * i], 16)
+    return "#" + "".join(f"{round(ch(base_hex, i) * (1 - a) + ch(top_hex, i) * a):02X}" for i in range(3))
+
+
+def base(doc):
+    """The void and the colour grade in a single opaque gradient: the grade's stops are blended over the void in
+    advance, so the browser paints one full-slice layer instead of two (this layer is under every slice, and every
+    animated slice repaints it on every frame)."""
+    total = frozen()["total"] or 1
+    gid = doc.uid("gr")
+    stops = "".join(f'<stop offset="{f(p)}" stop-color="{mix(VOID, col, op)}"/>' for p, col, op in GRADE)
+    doc.define(f'<linearGradient id="{gid}" gradientUnits="userSpaceOnUse" x1="0" y1="{f(-doc.y0)}" '
+               f'x2="0" y2="{f(total - doc.y0)}">{stops}</linearGradient>')
+    return f'<rect width="{doc.w}" height="{doc.h}" fill="url(#{gid})"/>'
 
 
 def grade(doc):
@@ -82,4 +107,25 @@ def layer(doc):
     """Everything behind a slice's own content."""
     if "@keyframes ct" not in doc.css:
         doc.css += CSS
-    return f'<rect width="{doc.w}" height="{doc.h}" fill="{VOID}"/>' + grade(doc) + glows(doc) + stars(doc.y0, doc.h)
+    return base(doc) + glows(doc) + stars(doc.y0, doc.h)
+
+
+def grade_alpha(page_y):
+    """The grade's opacity at a page y (colour is constant over the hero's range, so only opacity matters here)."""
+    t = page_y / (frozen()["total"] or 1)
+    for (p0, _, a0), (p1, _, a1) in zip(GRADE, GRADE[1:]):
+        if p0 <= t <= p1:
+            return a0 + (a1 - a0) * (t - p0) / (p1 - p0)
+    return GRADE[-1][2]
+
+
+def grade_strip(doc, y_from):
+    """The grade over the bottom of a slice only, ramping from nothing at y_from to its true value at the slice's
+    foot, so the slice meets the next one exactly. Painting the full slice again was a second full-size layer."""
+    gid = doc.uid("gr")
+    end = grade_alpha(doc.y0 + doc.h)
+    col = GRADE[1][1]
+    doc.define(f'<linearGradient id="{gid}" gradientUnits="userSpaceOnUse" x1="0" y1="{y_from}" x2="0" y2="{doc.h}">'
+               f'<stop offset="0" stop-color="{col}" stop-opacity="0"/><stop offset="1" stop-color="{col}" stop-opacity="{f(end)}"/>'
+               f'</linearGradient>')
+    return f'<rect y="{y_from}" width="{doc.w}" height="{doc.h - y_from}" fill="url(#{gid})"/>'

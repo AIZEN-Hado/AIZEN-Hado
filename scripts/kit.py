@@ -9,6 +9,7 @@ import json
 import math
 import pathlib
 import random
+import re
 
 # ---------------------------------------------------------------------------------------------- palette
 VOID = "#050508"
@@ -108,12 +109,16 @@ class Doc:
     def render(self, static=False):
         glyph_defs = "".join(f'<path id="{gid}" d="{d}"/>' for gid, d in self._glyphs.values())
         css = (self.css + (STATIC if static else MOTION_OFF)).strip()
+        body, defs = "".join(self.body), "".join(self.defs)
+        if static:      # a hidden element's SMIL still ticks and repaints; the frozen twin must be genuinely idle
+            body, defs = (re.sub(r"<animateMotion\b.*?</animateMotion>|<animate(?:Transform)?\b[^>]*/>", "", t, flags=re.S)
+                          for t in (body, defs))
         return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.w} {self.h}" width="{self.w}" '
                 f'height="{self.h}" role="img" aria-label="{esc(self.label)}" fill="none">'
                 f'<title>{esc(self.label)}</title>'
                 f'<style>{css}</style>'
-                f'<defs>{glyph_defs}{"".join(self.defs)}</defs>'
-                f'{"".join(self.body)}</svg>\n')
+                f'<defs>{glyph_defs}{defs}</defs>'
+                f'{body}</svg>\n')
 
     def save(self, name, link=None):
         """Write assets/<name>; animated images also get a frozen twin in assets/static/<name>."""
@@ -123,7 +128,12 @@ class Doc:
         path = ROOT / "assets" / name
         if LAYOUT.phase == "collect":
             return path
-        path.write_text(self.render(), encoding="utf-8")
+        svg = self.render()
+        if ("animation" in self.css or "<animate" in svg) and re.search(r"<(?:mask|filter)\b", svg):
+            # Browsers repaint a whole animated SVG every frame, and a mask or filter turns each repaint into
+            # extra off-screen layers: they made single slices cost 2-3x more than everything else on the page.
+            raise ValueError(f"{name}: animated slices must not use <mask> or <filter> (see scripts/MAINTAINING.md)")
+        path.write_text(svg, encoding="utf-8")
         if "animation" in self.css:
             (ROOT / "assets" / "static").mkdir(exist_ok=True)
             (ROOT / "assets" / "static" / name).write_text(self.render(static=True), encoding="utf-8")
@@ -273,7 +283,7 @@ def wrap(s, size, face, max_w, track=0):
 
 
 # ---------------------------------------------------------------------------------------------- chrome
-def plate(doc, density=.5, last=False, glow=None, **_):
+def plate(doc, density=.5, last=False, glow=None, bg=True, **_):
     """Paint this slice of the shared canvas and return a clip id for its content.
 
     density  how busy the background constellation is here (0 = none)
@@ -296,7 +306,8 @@ def plate(doc, density=.5, last=False, glow=None, **_):
          f"V{h - (r if bottom else 0)}" + (f"A{r} {r} 0 0 1 {w - r} {h}" if bottom else "") +
          f"H{r if bottom else 0}" + (f"A{r} {r} 0 0 1 0 {h - r}" if bottom else "") + "Z")
     doc.define(f'<clipPath id="{clip}"><path d="{d}"/></clipPath>')
-    doc.add(f'<g clip-path="url(#{clip})">{canvas.layer(doc)}</g>')
+    if bg:      # a slice that paints an opaque layer over its whole area can skip this (see hero.py)
+        doc.add(f'<g clip-path="url(#{clip})">{canvas.layer(doc)}</g>')
     return clip
 
 

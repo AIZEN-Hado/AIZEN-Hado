@@ -262,8 +262,7 @@ def frontier():
 
 
 # ================================================================================================ contact
-CONTACT_CSS = (".carrier{animation:carrier 6s linear infinite}@keyframes carrier{to{transform:translateX(-160px)}}"
-               ".led{animation:led 2.4s ease-in-out infinite}@keyframes led{50%{opacity:.25}}"
+CONTACT_CSS = (".led{animation:led 2.4s ease-in-out infinite}@keyframes led{50%{opacity:.25}}"
                ".bar{transform-box:fill-box;transform-origin:bottom;animation:bar 1.8s ease-in-out infinite}"
                "@keyframes bar{50%{transform:scaleY(.35)}}")
 
@@ -285,12 +284,17 @@ def contact():
         pts.append((x, y0 - 16 * env * math.sin(2 * math.pi * x / 16)))
     d = "M" + "L".join(f"{f(a)} {f(b)}" for a, b in pts)
     fade = doc.uid("fd")
+    # The wave scrolls left and fades out at both ends. A mask for that costs a full-slice off-screen layer on every
+    # frame (it made this the most expensive slice on the page), so the fade is the wave's own stroke gradient.
+    # The gradient lives in the scrolling group's coordinates, so it is moved the opposite way at the same speed
+    # (both are SMIL on one clock) and stays put on screen.
     doc.define(f'<linearGradient id="{fade}" gradientUnits="userSpaceOnUse" x1="40" x2="960" y1="0" y2="0">'
-               f'<stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".22" stop-color="#fff"/>'
-               f'<stop offset=".78" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
-               f'<mask id="wm" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}"><rect width="{W}" height="{H}" fill="url(#{fade})"/></mask>')
+               f'<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="160 0" dur="6s" repeatCount="indefinite"/>'
+               f'<stop offset="0" stop-color="{AMBER}" stop-opacity="0"/><stop offset=".22" stop-color="{AMBER}"/>'
+               f'<stop offset=".78" stop-color="{AMBER}"/><stop offset="1" stop-color="{AMBER}" stop-opacity="0"/></linearGradient>')
     g += [f'<path d="M40 {y0}H960" stroke="{WHITE}" stroke-opacity=".08"/>',
-          f'<g mask="url(#wm)"><g class="carrier"><path d="{d}" stroke="{AMBER}" stroke-width="1.2"/></g></g>',
+          f'<g><animateTransform attributeName="transform" type="translate" from="0 0" to="-160 0" dur="6s" repeatCount="indefinite"/>'
+          f'<path d="{d}" stroke="url(#{fade})" stroke-width="1.2"/></g>',
           doc.text("TX", 56, y0 + 38, 9, "mono-500", SILVER, .8, track=2),
           doc.text(P["coords"], 82, y0 + 38, 9, "mono-400", SILVER, .6, track=1.6),
           doc.text("RX  ·  ANYWHERE", W - 56, y0 + 38, 9, "mono-400", SILVER, .7, "end", track=1.6)]

@@ -44,9 +44,19 @@ forks), and the daily workflow's token cannot see private ones.
   decorative: they are hidden, not frozen, in the twins. The hero plays one entrance at load (name rises, the
   disk's arcs draw in oldest to newest, callouts land) and then loops quietly. Only the hero gets an entrance,
   because one-shot animations in lower slices would finish before anyone scrolls to them.
-- **No animated masks.** An animated mask makes the browser re-render an off-screen layer every frame and
-  roughly halves the frame rate (measured). The disk therefore draws in with per-arc `stroke-dashoffset`,
-  which costs nothing once the entrance ends. Keep new motion to transforms, opacity and dashoffset.
+- **Performance rules for animated slices.** A browser repaints the *whole* SVG on every frame once anything in
+  it moves, so what matters is the cost of one full paint, not how many things move. Measured on this page:
+  a mask cost 25-35 ms per frame (each), a filter 5-11 ms (worse on a rotated group), a full-slice gradient
+  about 8 ms, and the SMIL particles, comets and 364 arcs next to nothing. So, in animated slices:
+  - never use `<mask>` or `<filter>` (`kit.save` raises if you do). Fade with a stroke or fill gradient, make
+    glows from stacked translucent strokes (`hero.halo`), and reveal with `clip-path` or per-arc dashoffset;
+  - fill only the box a radial gradient can touch (`canvas.extent`); it is transparent beyond its radius;
+  - do not paint a plate background that an opaque layer covers (`kit.plate(bg=False)`);
+  - give long rings a solid colour rather than a gradient each;
+  - `canvas.base` paints void + grade as one gradient, not two layers.
+  Frozen twins carry no SMIL at all (a hidden element's SMIL still ticks and repaints).
+  To measure: draw the SVG into a 2x canvas 40 times in headless Chrome and take the median (about 35 ms for the
+  hero now; it was 145 ms). The page's other slices sit at 11-18 ms, which is the floor for a full-width slice.
 - **Text is outlined** from `glyphs.json` (Instrument Serif, Inter, JetBrains Mono; SIL OFL), because
   GitHub's image proxy blocks web fonts. Rebuild it only to add characters: see `scripts/fonts.py`.
 
