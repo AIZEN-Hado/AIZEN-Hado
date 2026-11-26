@@ -299,7 +299,7 @@ def contact():
                  f'height="{hgt}" fill="{AMBER if i < 3 else SILVER}" fill-opacity="{1 if i < 3 else .4}"/>')
     g.append(doc.text("SIGNAL", W - 59, 102, 8.5, "mono-400", SILVER, .7, "end", track=1.6))
     g.append(kit.registration(doc))
-    g.append(kit.corner_labels(doc, tl="FIG. 7  /  COMMUNICATIONS", tr="FOUR CHANNELS BELOW"))
+    g.append(kit.corner_labels(doc, tl="FIG. 7  /  COMMUNICATIONS", tr=f'{("ZERO ONE TWO THREE FOUR FIVE SIX").split()[len(P["contact"]["channels"])]} CHANNEL{"" if len(P["contact"]["channels"]) == 1 else "S"} BELOW'))
     finish(doc, clip, g, "contact-terminal.svg")
 
 
